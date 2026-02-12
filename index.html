@@ -130,44 +130,72 @@ function placeOrder(){
 if(localStorage.getItem("storeClosed")==="true")return alert("Store Closed");
 if(cart.length==0)return alert("Cart empty");
 
-let name=custName.value,room=roomNo.value,hostel=document.getElementById("hostel").value,pay=payment.value,utr=document.getElementById("utr").value,mode=document.getElementById("mode").value;
-/* REQUIRED FIELD CHECK */
-if(!name.trim()){
-alert("Please enter your name");
+let name = custName.value.trim();
+let room = roomNo.value.trim();
+let hostel = document.getElementById("hostel").value;
+let pay = document.getElementById("payment").value;
+let utr = document.getElementById("utr").value.trim();
+let mode = document.getElementById("mode").value;
+
+/* STRICT VALIDATION */
+
+// Name → only English letters
+if(!/^[A-Za-z ]+$/.test(name)){
+alert("Name must contain only English letters");
 return;
 }
 
-if(!room.trim()){
-alert("Please enter room number");
+// Room → only numbers
+if(!/^[0-9]+$/.test(room)){
+alert("Room number must be digits only");
 return;
 }
 
-if(!hostel){
-alert("Please select hostel");
+// Hostel restriction
+if(hostel==="Girls Hostel"){
+alert("Service not available for Girls Hostel");
 return;
 }
 
+// Payment required
 if(!pay){
-alert("Please select payment method");
+alert("Select payment method");
 return;
 }
 
-if(pay!=="Cash" && !utr.trim()){
-alert("Enter UPI reference / last digits");
+// UPI reference digits only
+if(pay!=="Cash" && !/^[0-9]{4,12}$/.test(utr)){
+alert("Enter valid UPI reference (4-12 digits)");
 return;
 }
 
+// Mode required
 if(!mode){
-alert("Please select delivery mode");
+alert("Select delivery or pickup");
 return;
 }
 
-  if(hostel==="Girls Hostel")return alert("Service not available for Girls Hostel");
-if(pay!="Cash"&&!utr)return alert("Enter payment ref");
 
 let total=0,msg=`🧾 ORDER%0A🆔 ${orderCounter}%0A👤 ${name}%0A🏠 ${room}%0A🏢 ${hostel}%0A📦 ${mode}%0A%0A`;
 cart.forEach(i=>{let s=i.price*i.qty;total+=s;msg+=`• ${i.name} x${i.qty}=₹${s}%0A`;stockData[i.name]-=i.qty;});
-let d=(mode==="pickup")?0:10; total+=d;
+function getDeliveryCharge(mode){
+
+// pickup free
+if(mode==="pickup") return 0;
+
+let hour = new Date().getHours();
+
+// 8am to 7pm
+if(hour>=8 && hour<19){
+return 10;
+}
+
+// night
+return 20;
+}
+let d=getDeliveryCharge(mode);
+total+=d;
+
 if(mode==="pickup")msg+=`📍 Collect From Room: 605%0A`;
 msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A⏱10-15 min`;
 
@@ -236,6 +264,7 @@ showTop();
 
 </body>
 </html>
+
 
 
 
