@@ -131,7 +131,38 @@ if(localStorage.getItem("storeClosed")==="true")return alert("Store Closed");
 if(cart.length==0)return alert("Cart empty");
 
 let name=custName.value,room=roomNo.value,hostel=document.getElementById("hostel").value,pay=payment.value,utr=document.getElementById("utr").value,mode=document.getElementById("mode").value;
-if(hostel==="Girls Hostel")return alert("Service not available for Girls Hostel");
+/* REQUIRED FIELD CHECK */
+if(!name.trim()){
+alert("Please enter your name");
+return;
+}
+
+if(!room.trim()){
+alert("Please enter room number");
+return;
+}
+
+if(!hostel){
+alert("Please select hostel");
+return;
+}
+
+if(!pay){
+alert("Please select payment method");
+return;
+}
+
+if(pay!=="Cash" && !utr.trim()){
+alert("Enter UPI reference / last digits");
+return;
+}
+
+if(!mode){
+alert("Please select delivery mode");
+return;
+}
+
+  if(hostel==="Girls Hostel")return alert("Service not available for Girls Hostel");
 if(pay!="Cash"&&!utr)return alert("Enter payment ref");
 
 let total=0,msg=`🧾 ORDER%0A🆔 ${orderCounter}%0A👤 ${name}%0A🏠 ${room}%0A🏢 ${hostel}%0A📦 ${mode}%0A%0A`;
@@ -205,6 +236,7 @@ showTop();
 
 </body>
 </html>
+
 
 
 
