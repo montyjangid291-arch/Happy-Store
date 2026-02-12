@@ -6,196 +6,166 @@
 <title>My Hostel Store</title>
 
 <style>
-body{
-    margin:0;
-    font-family:Arial, Helvetica, sans-serif;
-    background:#f2f2f2;
-}
-
-header{
-    background:#111;
-    color:white;
-    text-align:center;
-    padding:15px;
-    font-size:22px;
-}
-
-.container{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
-    gap:15px;
-    padding:15px;
-}
-
-.card{
-    background:white;
-    padding:10px;
-    border-radius:10px;
-    text-align:center;
-    box-shadow:0 4px 10px rgba(0,0,0,0.1);
-}
-
-.card img{
-    width:100%;
-    height:140px;
-    object-fit:cover;
-    border-radius:8px;
-}
-
-.price{
-    font-weight:bold;
-    margin:6px;
-}
-
-.stock{
-    font-size:14px;
-    margin-bottom:5px;
-}
-
-.in{color:green;}
-.out{color:red;}
-
-select{
-    padding:5px;
-    margin:5px;
-}
-
-.btn{
-    background:#25D366;
-    color:white;
-    padding:8px 12px;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-}
-
-.btn:disabled{
-    background:grey;
-}
+body{margin:0;font-family:Arial;background:#f2f2f2;}
+header{background:#111;color:white;text-align:center;padding:15px;font-size:22px;}
+.container{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:15px;padding:15px;}
+.card{background:white;padding:10px;border-radius:10px;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+.card img{width:100%;height:140px;object-fit:cover;border-radius:8px;}
+.price{font-weight:bold;margin:6px;}
+.stock{font-size:14px;margin-bottom:5px;}
+.in{color:green;} .out{color:red;}
+.btn{background:#25D366;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:5px;}
+.btn:disabled{background:grey;}
+input,select{padding:6px;margin:5px;}
 </style>
 </head>
 
 <body>
+
+<header>🛒 My Hostel Store</header>
+
 <!-- CUSTOMER DETAILS -->
 <h2 style="text-align:center">Customer Details</h2>
-
 <div style="text-align:center;margin-bottom:20px;">
-<input id="custName" placeholder="Your Name" style="padding:8px;margin:5px;"><br>
-<input id="roomNo" placeholder="Room Number" style="padding:8px;margin:5px;"><br>
-<select id="payment" style="padding:8px;margin:5px;">
+<input id="custName" placeholder="Your Name"><br>
+<input id="roomNo" placeholder="Room Number"><br>
+
+<select id="payment">
 <option>UPI</option>
 <option>Cash</option>
 <option>Paytm</option>
-</select>
+</select><br>
+
+<input id="utr" placeholder="UPI Ref No / Last 4 digits"><br>
+</div>
+
+<!-- PRODUCTS -->
+<div class="container">
+
+<div class="card">
+<img src="maggi.jpg">
+<h3>Maggi</h3>
+<div class="price">₹20</div>
+<div class="stock in">In Stock: 10</div>
+<input type="number" id="qty1" value="1" min="1">
+<br><button class="btn" onclick="addToCart('Maggi',20,'qty1')">Add</button>
+</div>
+
+<div class="card">
+<img src="kurkure.jpg">
+<h3>Kurkure</h3>
+<div class="price">₹20</div>
+<div class="stock in">In Stock: 5</div>
+<input type="number" id="qty2" value="1" min="1">
+<br><button class="btn" onclick="addToCart('Kurkure',20,'qty2')">Add</button>
+</div>
+
+<div class="card">
+<img src="bhujia.jpg">
+<h3>Bhujia</h3>
+<div class="price">₹300</div>
+<div class="stock out">Out of Stock</div>
+<button class="btn" disabled>Sold Out</button>
+</div>
+
+<div class="card">
+<img src="ariel.jpg">
+<h3>Ariel</h3>
+<div class="price">₹160</div>
+<div class="stock in">In Stock: 1</div>
+<input type="number" id="qty4" value="1" min="1">
+<br><button class="btn" onclick="addToCart('Ariel',160,'qty4')">Add</button>
+</div>
+
 </div>
 
 <!-- CART -->
 <h2 style="text-align:center">🛒 Your Cart</h2>
-<div id="cart" style="padding:10px;text-align:center"></div>
+<div id="cart" style="text-align:center"></div>
 
 <div style="text-align:center;margin:20px;">
 <button class="btn" onclick="placeOrder()">Place Order on WhatsApp</button>
 </div>
 
-<header>🛒 My Hostel Store</header>
-
-<div class="container">
-
-<!-- PRODUCT 1 -->
-<div class="card">
-<img src="maggi.jpg">
-<h3>Maggi</h3>
-<div class="price">₹20</div>
-<div id="stock1" class="stock in">In Stock: 10</div>
-
-<select id="qty1">
-<option>1</option><option>2</option><option>3</option><option>4</option>
-</select>
-
-<br>
-<button class="btn" onclick="order('Maggi',20,1,10)">Order</button>
-</div>
-
-<!-- PRODUCT 2 -->
-<div class="card">
-<img src="kurkure.jpg">
-<h3>kurkure</h3>
-<div class="price">₹20</div>
-<div id="stock2" class="stock in">In Stock: 5</div>
-
-<select id="qty2">
-<option>1</option><option>2</option><option>3</option>
-</select>
-
-<br>
-<button class="btn" onclick="order('Tedhe Medhe',40,2,5)">Order</button>
-</div>
-
-<!-- PRODUCT 3 -->
-<div class="card">
-<img src="bhujia.jpg">
-<h3>Bhujia</h3>
-<div class="price">₹300</div>
-<div id="stock3" class="stock out">Out of Stock</div>
-
-<select id="qty3" disabled>
-<option>0</option>
-</select>
-
-<br>
-<button class="btn" disabled>Sold Out</button>
-</div>
-
-    <!-- PRODUCT 4 -->
-<div class="card">
-<img src="ariel.jpg">
-<h3>ARIEL</h3>
-<div class="price">₹160</div>
-<div id="stock1" class="stock in">In Stock: 1</div>
-
-<select id="qty1">
-<option>1</option><option>2</option><option>3</option><option>4</option>
-</select>
-
-<br>
-<button class="btn" onclick="order('ariel',20,1,10)">Order</button>
-</div>
-
-    
-</div>
-
 <script>
-var phone="9983729301"; // CHANGE NUMBER
 
-function order(name,price,id,stock){
+var phone="919983729301"; // apna number
+var cart=[];
 
-var qty=parseInt(document.getElementById("qty"+id).value);
+function addToCart(name,price,qtyId){
+let qty=parseInt(document.getElementById(qtyId).value);
+if(isNaN(qty)||qty<=0){alert("Enter valid qty");return;}
+cart.push({name,price,qty});
+showCart();
+}
 
-if(isNaN(qty) || qty<=0){
-alert("Enter valid quantity");
+function showCart(){
+let text=""; let total=0;
+cart.forEach(item=>{
+let sub=item.price*item.qty;
+total+=sub;
+text+=`${item.name} × ${item.qty} = ₹${sub}<br>`;
+});
+text+="<br><b>Total: ₹"+total+"</b>";
+document.getElementById("cart").innerHTML=text;
+}
+
+function getDeliveryCharge(){
+let hour=new Date().getHours();
+if(hour>=15 && hour<20) return 10;
+if(hour>=20) return 20;
+return 0;
+}
+
+function serviceOpen(){
+let hour=new Date().getHours();
+return !(hour>=9 && hour<15);
+}
+
+function placeOrder(){
+
+if(!serviceOpen()){
+alert("Service not available (Owner at college)");
 return;
 }
 
-if(qty>stock){
-alert("Only "+stock+" left!");
+if(cart.length==0){alert("Cart empty");return;}
+
+let name=document.getElementById("custName").value;
+let room=document.getElementById("roomNo").value;
+let pay=document.getElementById("payment").value;
+let utr=document.getElementById("utr").value;
+
+if(name==""||room==""){
+alert("Enter name and room number");
 return;
 }
 
-var total=price*qty;
+let msg="NEW ORDER%0A%0A";
+msg+=`Name: ${name}%0A`;
+msg+=`Room: ${room}%0A`;
+msg+=`Payment: ${pay}%0A`;
+msg+=`Payment Ref: ${utr}%0A%0A`;
 
-var msg="Hello! I want to order:\n"+
-name+"\nQuantity: "+qty+
-"\nTotal: ₹"+total+
-"\nI will pay via UPI.";
+let total=0;
 
-var url="https://wa.me/"+phone+"?text="+encodeURIComponent(msg);
+cart.forEach(item=>{
+let sub=item.price*item.qty;
+total+=sub;
+msg+=`${item.name} x ${item.qty} = ₹${sub}%0A`;
+});
 
-window.open(url,'_blank');
+let delivery=getDeliveryCharge();
+total+=delivery;
+
+msg+=`%0ADelivery: ₹${delivery}`;
+msg+=`%0ATotal Payable: ₹${total}`;
+
+window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
 }
 
 </script>
 
 </body>
 </html>
-
 
