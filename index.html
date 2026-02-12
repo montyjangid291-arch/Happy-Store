@@ -61,7 +61,15 @@ input,select{padding:6px;margin:5px;}
 
 <div style="text-align:center;margin-top:30px;">
 <button onclick="showAdmin()">Admin</button>
-<div id="adminPanel" style="display:none;margin-top:10px;">
+<div id="adminPanel" style="display:none;margin-top:10px;border:1px solid #ccc;padding:10px;">
+<h3>Admin Controls</h3>
+
+Maggi: <input id="sMaggi" type="number"><br>
+Kurkure: <input id="sKurkure" type="number"><br>
+Bhujia: <input id="sBhujia" type="number"><br>
+Ariel: <input id="sAriel" type="number"><br><br>
+
+<button onclick="saveStock()">Save Stock</button>
 <button onclick="resetStock()">Reset Stock</button>
 </div>
 </div>
@@ -144,14 +152,42 @@ cart=[]; showCart(); updateStockDisplay();
 custName.value=""; roomNo.value=""; utr.value="";
 }
 
-function showAdmin(){ if(prompt("Password")==="291") adminPanel.style.display="block"; }
-function resetStock(){ stockData={Maggi:24,Kurkure:9,Bhujia:2,Ariel:1}; updateStockDisplay(); }
+function showAdmin(){
+let pass=prompt("Enter Admin Password");
+if(pass==="291"){
+document.getElementById("adminPanel").style.display="block";
+
+sMaggi.value=stockData.Maggi;
+sKurkure.value=stockData.Kurkure;
+sBhujia.value=stockData.Bhujia;
+sAriel.value=stockData.Ariel;
+
+}else{
+alert("Wrong password");
+}
+}
+
+function resetStock(){
+stockData={Maggi:24,Kurkure:9,Bhujia:2,Ariel:1};
+updateStockDisplay();
+alert("Stock reset to original");
+}
+function saveStock(){
+stockData.Maggi=parseInt(document.getElementById("sMaggi").value);
+stockData.Kurkure=parseInt(document.getElementById("sKurkure").value);
+stockData.Bhujia=parseInt(document.getElementById("sBhujia").value);
+stockData.Ariel=parseInt(document.getElementById("sAriel").value);
+
+updateStockDisplay();
+alert("Stock Updated");
+}
 
 updateStockDisplay();
 
 </script>
 </body>
 </html>
+
 
 
 
