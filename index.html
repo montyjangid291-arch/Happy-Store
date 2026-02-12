@@ -27,16 +27,26 @@ input,select{padding:6px;margin:5px;}
 <div style="text-align:center;margin-bottom:20px;">
 <input id="custName" placeholder="Your Name"><br>
 <input id="roomNo" placeholder="Room Number"><br>
+
+<select id="hostel">
+<option value="Boys Hostel">Boys Hostel</option>
+<option value="Girls Hostel">Girls Hostel</option>
+<option value="Gate Pickup">Gate Pickup</option>
+</select><br>
+
 <select id="payment">
 <option>UPI</option>
 <option>Cash</option>
 <option>Paytm</option>
 </select><br>
+
 <input id="utr" placeholder="UPI Ref No / Last 4 digits"><br>
-  <select id="mode">
+
+<select id="mode">
 <option value="delivery">Room Delivery</option>
 <option value="pickup">Self Pickup</option>
 </select><br>
+
 
 </div>
 
@@ -82,6 +92,11 @@ var cart=[];
 
 var stockData={Maggi:24,Kurkure:9,Bhujia:2,Ariel:1};
 
+/* LOAD SAVED STOCK */
+if(localStorage.getItem("storeStock")){
+stockData = JSON.parse(localStorage.getItem("storeStock"));
+}
+
 function updateStockDisplay(){
 document.querySelectorAll(".card").forEach(card=>{
 let name=card.querySelector("h3").innerText;
@@ -125,14 +140,16 @@ orderCounter++; localStorage.setItem("orderNo",orderCounter);
 
 let name=custName.value,
     room=roomNo.value,
+    hostel=document.getElementById("hostel").value,
     pay=payment.value,
     utr=document.getElementById("utr").value,
     mode=document.getElementById("mode").value;
 
+
 if(!name||!room)return alert("Enter name & room");
 if(pay!="Cash"&&!utr)return alert("Enter payment reference");
 
-let msg=`🧾 HOSTEL STORE ORDER%0A%0A🆔 Order No: ${orderCounter}%0A%0A👤 Name: ${name}%0A🏠 Room: ${room}%0A💳 Payment: ${pay}%0A📦 Mode: ${mode}%0A🔢 Ref: ${utr}%0A%0A📦 ITEMS%0A`;
+let msg=`🧾 HOSTEL STORE ORDER%0A%0A🆔 Order No: ${orderCounter}%0A%0A👤 Name: ${name}%0A🏠 Room: ${room}%0A🏢 Hostel: ${hostel}%0A💳 Payment: ${pay}%0A📦 Mode: ${mode}%0A🔢 Ref: ${utr}%0A%0A📦 ITEMS%0A`;
 
 let total=0;
 cart.forEach(item=>{
@@ -187,6 +204,7 @@ updateStockDisplay();
 </script>
 </body>
 </html>
+
 
 
 
