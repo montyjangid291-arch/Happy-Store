@@ -145,6 +145,11 @@ let name=custName.value,
     utr=document.getElementById("utr").value,
     mode=document.getElementById("mode").value;
 
+    /* GIRLS HOSTEL FULL BLOCK */
+if(hostel==="Girls Hostel"){
+alert("Service not available for Girls Hostel");
+return;
+}
 
 if(!name||!room)return alert("Enter name & room");
 if(pay!="Cash"&&!utr)return alert("Enter payment reference");
@@ -204,6 +209,7 @@ updateStockDisplay();
 </script>
 </body>
 </html>
+
 
 
 
