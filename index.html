@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Hostel Store</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial, Helvetica, sans-serif;
+    background:#f2f2f2;
+}
+
+header{
+    background:#111;
+    color:white;
+    text-align:center;
+    padding:15px;
+    font-size:22px;
+}
+
+.container{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:15px;
+    padding:15px;
+}
+
+.card{
+    background:white;
+    padding:10px;
+    border-radius:10px;
+    text-align:center;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.card img{
+    width:100%;
+    height:140px;
+    object-fit:cover;
+    border-radius:8px;
+}
+
+.price{
+    font-weight:bold;
+    margin:6px;
+}
+
+.stock{
+    font-size:14px;
+    margin-bottom:5px;
+}
+
+.in{color:green;}
+.out{color:red;}
+
+select{
+    padding:5px;
+    margin:5px;
+}
+
+.btn{
+    background:#25D366;
+    color:white;
+    padding:8px 12px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.btn:disabled{
+    background:grey;
+}
+</style>
+</head>
+
+<body>
+
+<header>🛒 My Hostel Store</header>
+
+<div class="container">
+
+<!-- PRODUCT 1 -->
+<div class="card">
+<img src="maggi.jpg">
+<h3>Maggi</h3>
+<div class="price">₹20</div>
+<div id="stock1" class="stock in">In Stock: 10</div>
+
+<select id="qty1">
+<option>1</option><option>2</option><option>3</option><option>4</option>
+</select>
+
+<br>
+<button class="btn" onclick="order('Maggi',20,1,10)">Order</button>
+</div>
+
+<!-- PRODUCT 2 -->
+<div class="card">
+<img src="kurkure.jpg">
+<h3>kurkure</h3>
+<div class="price">₹20</div>
+<div id="stock2" class="stock in">In Stock: 5</div>
+
+<select id="qty2">
+<option>1</option><option>2</option><option>3</option>
+</select>
+
+<br>
+<button class="btn" onclick="order('Tedhe Medhe',40,2,5)">Order</button>
+</div>
+
+<!-- PRODUCT 3 -->
+<div class="card">
+<img src="bhujia.jpg">
+<h3>Bhujia</h3>
+<div class="price">₹300</div>
+<div id="stock3" class="stock out">Out of Stock</div>
+
+<select id="qty3" disabled>
+<option>0</option>
+</select>
+
+<br>
+<button class="btn" disabled>Sold Out</button>
+</div>
+
+</div>
+
+<script>
+var phone="9983729301"; // CHANGE NUMBER
+
+function order(name,price,id,stock){
+
+var qty=document.getElementById("qty"+id).value;
+
+if(qty>stock){
+alert("Only "+stock+" left!");
+return;
+}
+
+var total=price*qty;
+
+var msg="Hello! I want to order:\n"+
+name+"\nQuantity: "+qty+
+"\nTotal: ₹"+total+
+"\nI will pay via UPI.";
+
+var url="https://wa.me/"+phone+"?text="+encodeURIComponent(msg);
+
+window.open(url,'_blank');
+}
+</script>
+
+</body>
+</html>
