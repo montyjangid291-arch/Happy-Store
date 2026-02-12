@@ -65,6 +65,7 @@ input,select{padding:6px;margin:5px;}
 <h3>Bhujia</h3>
 <div class="price">₹300</div>
 <div class="stock in">In Stock: 2</div>
+  <input type="number" id="qty2" value="1" min="1">
 <br><button class="btn" onclick="addToCart('Bhujia',300,'qty2')">Add</button>
 </div>
 
@@ -100,123 +101,19 @@ Admin
 </div>
 
 
-<script>
-
-var phone="9983729301"; // apna number
-var cart=[];
-
-function addToCart(name,price,qtyId){
-let qty=parseInt(document.getElementById(qtyId).value);
-if(isNaN(qty)||qty<=0){alert("Enter valid qty");return;}
-cart.push({name,price,qty});
-showCart();
-}
-
-function showCart(){
-let text=""; let total=0;
-cart.forEach(item=>{
-let sub=item.price*item.qty;
-total+=sub;
-text+=`${item.name} × ${item.qty} = ₹${sub}<br>`;
-});
-text+="<br><b>Total: ₹"+total+"</b>";
-document.getElementById("cart").innerHTML=text;
-}
-
-function getDeliveryCharge(){
-let hour=new Date().getHours();
-if(hour>=15 && hour<20) return 10;
-if(hour>=20) return 20;
-return 0;
-}
-
-function serviceOpen(){
-let hour=new Date().getHours();
-return !(hour>=9 && hour<15);
-}
-
-function placeOrder(){
-
-if(!serviceOpen()){
-alert("Service not available (Owner at college)");
-return;
-}
-
-if(cart.length==0){alert("Cart empty");return;}
-
-let name=document.getElementById("custName").value;
-let room=document.getElementById("roomNo").value;
-let pay=document.getElementById("payment").value;
-let utr=document.getElementById("utr").value;
-
-if(name==""||room==""){
-alert("Enter name and room number");
-return;
-}
-
-let msg="NEW ORDER%0A%0A";
-msg+=`Name: ${name}%0A`;
-msg+=`Room: ${room}%0A`;
-msg+=`Payment: ${pay}%0A`;
-msg+=`Payment Ref: ${utr}%0A%0A`;
-
-let total=0;
-
-cart.forEach(item=>{
-let sub=item.price*item.qty;
-total+=sub;
-msg+=`${item.name} x ${item.qty} = ₹${sub}%0A`;
-});
-
-let delivery=getDeliveryCharge();
-total+=delivery;
-
-msg+=`%0ADelivery: ₹${delivery}`;
-msg+=`%0ATotal Payable: ₹${total}`;
-
-window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
-}
 
 <script>
 
-var phone="9983729301";
+var phone="919983729301";
 var cart=[];
 
-/* DEFAULT STOCK */
 var stockData={
-Maggi:24,
-Kurkure:9,
-Bhujia:2,
+Maggi:10,
+Kurkure:5,
+Bhujia:0,
 Ariel:1
 };
 
-/* LOAD STOCK */
-if(localStorage.getItem("stock")){
-stockData=JSON.parse(localStorage.getItem("stock"));
-}
-updateStockUI();
-
-/* UPDATE UI */
-function updateStockUI(){
-document.querySelectorAll(".card").forEach(card=>{
-let name=card.querySelector("h3").innerText;
-let stock=stockData[name];
-
-let stockText=card.querySelector(".stock");
-let btn=card.querySelector(".btn");
-
-if(stock<=0){
-stockText.innerHTML="Out of Stock";
-stockText.className="stock out";
-if(btn) btn.disabled=true;
-}else{
-stockText.innerHTML="In Stock: "+stock;
-stockText.className="stock in";
-}
-});
-}
-
-/* ADD TO CART */
 function addToCart(name,price,qtyId){
 let qty=parseInt(document.getElementById(qtyId).value);
 if(isNaN(qty)||qty<=0){alert("Enter valid qty");return;}
@@ -225,7 +122,6 @@ cart.push({name,price,qty});
 showCart();
 }
 
-/* SHOW CART */
 function showCart(){
 let text=""; let total=0;
 cart.forEach(item=>{
@@ -237,7 +133,6 @@ text+="<br><b>Total: ₹"+total+"</b>";
 document.getElementById("cart").innerHTML=text;
 }
 
-/* DELIVERY CHARGE */
 function getDeliveryCharge(){
 let hour=new Date().getHours();
 if(hour>=15 && hour<20) return 10;
@@ -245,13 +140,11 @@ if(hour>=20) return 20;
 return 0;
 }
 
-/* SERVICE TIME */
 function serviceOpen(){
 let hour=new Date().getHours();
 return !(hour>=9 && hour<15);
 }
 
-/* PLACE ORDER */
 function placeOrder(){
 
 if(!serviceOpen()){alert("Service not available");return;}
@@ -276,7 +169,6 @@ cart.forEach(item=>{
 let sub=item.price*item.qty;
 total+=sub;
 msg+=`${item.name} x ${item.qty} = ₹${sub}%0A`;
-
 stockData[item.name]-=item.qty;
 });
 
@@ -286,15 +178,12 @@ total+=delivery;
 msg+=`%0ADelivery: ₹${delivery}`;
 msg+=`%0ATotal Payable: ₹${total}`;
 
-/* SAVE STOCK */
-localStorage.setItem("stock",JSON.stringify(stockData));
-
 window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
 cart=[];
-updateStockUI();
+showCart();
 }
 
-  /* ADMIN PANEL */
+/* ADMIN PANEL */
 function showAdmin(){
 let pass=prompt("Enter Admin Password");
 if(pass==="291"){
@@ -305,17 +194,19 @@ alert("Wrong password");
 }
 
 function resetStock(){
-localStorage.removeItem("stock");
-location.reload();
+stockData={Maggi:10,Kurkure:5,Bhujia:0,Ariel:1};
+showCart();
+alert("Stock Reset Done");
 }
 
-  
 </script>
+
 
   
 
 </body>
 </html>
+
 
 
 
