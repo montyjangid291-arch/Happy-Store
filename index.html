@@ -33,6 +33,11 @@ input,select{padding:6px;margin:5px;}
 <option>Paytm</option>
 </select><br>
 <input id="utr" placeholder="UPI Ref No / Last 4 digits"><br>
+  <select id="mode">
+<option value="delivery">Room Delivery</option>
+<option value="pickup">Self Pickup</option>
+</select><br>
+
 </div>
 
 <div class="container">
@@ -110,11 +115,16 @@ if(orderTotal<20)return alert("Minimum order ₹20 required");
 
 orderCounter++; localStorage.setItem("orderNo",orderCounter);
 
-let name=custName.value, room=roomNo.value, pay=payment.value, utr=document.getElementById("utr").value;
+let name=custName.value,
+    room=roomNo.value,
+    pay=payment.value,
+    utr=document.getElementById("utr").value,
+    mode=document.getElementById("mode").value;
+
 if(!name||!room)return alert("Enter name & room");
 if(pay!="Cash"&&!utr)return alert("Enter payment reference");
 
-let msg=`🧾 HOSTEL STORE ORDER%0A%0A🆔 Order No: ${orderCounter}%0A%0A👤 Name: ${name}%0A🏠 Room: ${room}%0A💳 Payment: ${pay}%0A🔢 Ref: ${utr}%0A%0A📦 ITEMS%0A`;
+let msg=`🧾 HOSTEL STORE ORDER%0A%0A🆔 Order No: ${orderCounter}%0A%0A👤 Name: ${name}%0A🏠 Room: ${room}%0A💳 Payment: ${pay}%0A📦 Mode: ${mode}%0A🔢 Ref: ${utr}%0A%0A📦 ITEMS%0A`;
 
 let total=0;
 cart.forEach(item=>{
@@ -123,7 +133,9 @@ msg+=`• ${item.name} x${item.qty} = ₹${sub}%0A`;
 stockData[item.name]-=item.qty;
 });
 
-let delivery=getDeliveryCharge(); total+=delivery;
+let delivery = (mode==="pickup") ? 0 : getDeliveryCharge();
+total+=delivery;
+
 msg+=`%0A🚚 Delivery: ₹${delivery}%0A----------------------%0A💰 TOTAL: ₹${total}%0A⏰ ${new Date().toLocaleTimeString()}`;
 
 window.open(`https://wa.me/${phone}?text=${msg}`);
@@ -140,6 +152,7 @@ updateStockDisplay();
 </script>
 </body>
 </html>
+
 
 
 
