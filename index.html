@@ -87,6 +87,19 @@ input,select{padding:6px;margin:5px;}
 <button class="btn" onclick="placeOrder()">Place Order on WhatsApp</button>
 </div>
 
+<!-- ADMIN PANEL YAHAN PASTE KARO -->
+<div style="text-align:center;margin-top:30px;">
+<button onclick="showAdmin()" style="background:#444;color:white;border:none;padding:6px 10px;border-radius:6px;">
+Admin
+</button>
+
+<div id="adminPanel" style="display:none;margin-top:10px;">
+<input type="password" id="adminPass" placeholder="Enter Password">
+<button onclick="resetStock()">Reset Stock</button>
+</div>
+</div>
+
+
 <script>
 
 var phone="9983729301"; // apna number
@@ -166,14 +179,14 @@ window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
 
 <script>
 
-var phone="919983729301";
+var phone="9983729301";
 var cart=[];
 
 /* DEFAULT STOCK */
 var stockData={
-Maggi:10,
-Kurkure:5,
-Bhujia:0,
+Maggi:24,
+Kurkure:9,
+Bhujia:2,
 Ariel:1
 };
 
@@ -281,11 +294,28 @@ cart=[];
 updateStockUI();
 }
 
+  /* ADMIN PANEL */
+function showAdmin(){
+let pass=prompt("Enter Admin Password");
+if(pass==="291"){
+document.getElementById("adminPanel").style.display="block";
+}else{
+alert("Wrong password");
+}
+}
+
+function resetStock(){
+localStorage.removeItem("stock");
+location.reload();
+}
+
+  
 </script>
 
   
 
 </body>
 </html>
+
 
 
