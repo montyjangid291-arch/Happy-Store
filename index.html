@@ -15,7 +15,6 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 .stock{font-size:14px;margin-bottom:5px;}
 .in{color:green;} .out{color:red;}
 .btn{background:#25D366;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:5px;}
-.btn:disabled{background:grey;}
 input,select{padding:6px;margin:5px;}
 </style>
 </head>
@@ -24,63 +23,30 @@ input,select{padding:6px;margin:5px;}
 
 <header>🛒 My Hostel Store</header>
 
-<!-- CUSTOMER DETAILS -->
 <h2 style="text-align:center">Customer Details</h2>
 <div style="text-align:center;margin-bottom:20px;">
 <input id="custName" placeholder="Your Name"><br>
 <input id="roomNo" placeholder="Room Number"><br>
-
 <select id="payment">
 <option>UPI</option>
 <option>Cash</option>
 <option>Paytm</option>
 </select><br>
-
 <input id="utr" placeholder="UPI Ref No / Last 4 digits"><br>
 </div>
 
-<!-- PRODUCTS -->
 <div class="container">
 
-<div class="card">
-<img src="maggi.jpg">
-<h3>Maggi</h3>
-<div class="price">₹20</div>
-<div class="stock in">In Stock: 24</div>
-<input type="number" id="qty1" value="1" min="1">
-<br><button class="btn" onclick="addToCart('Maggi',20,'qty1')">Add</button>
-</div>
+<div class="card"><img src="maggi.jpg"><h3>Maggi</h3><div class="price">₹20</div><div class="stock">In Stock</div><input type="number" id="qty1" value="1" min="1"><br><button class="btn" onclick="addToCart('Maggi',20,'qty1')">Add</button></div>
 
-<div class="card">
-<img src="kurkure.jpg">
-<h3>Kurkure</h3>
-<div class="price">₹20</div>
-<div class="stock in">In Stock: 9</div>
-<input type="number" id="qty2" value="1" min="1">
-<br><button class="btn" onclick="addToCart('Kurkure',20,'qty2')">Add</button>
-</div>
+<div class="card"><img src="kurkure.jpg"><h3>Kurkure</h3><div class="price">₹20</div><div class="stock">In Stock</div><input type="number" id="qty2" value="1" min="1"><br><button class="btn" onclick="addToCart('Kurkure',20,'qty2')">Add</button></div>
 
-<div class="card">
-<img src="bhujia.jpg">
-<h3>Bhujia</h3>
-<div class="price">₹300</div>
-<div class="stock in">In Stock: 2</div>
- <input type="number" id="qty3" value="1" min="1">
-<button class="btn" onclick="addToCart('Bhujia',300,'qty3')">Add</button>
-</div>
+<div class="card"><img src="bhujia.jpg"><h3>Bhujia</h3><div class="price">₹300</div><div class="stock">In Stock</div><input type="number" id="qty3" value="1" min="1"><br><button class="btn" onclick="addToCart('Bhujia',300,'qty3')">Add</button></div>
 
-<div class="card">
-<img src="ariel.jpg">
-<h3>Ariel</h3>
-<div class="price">₹160</div>
-<div class="stock in">In Stock: 1</div>
-<input type="number" id="qty4" value="1" min="1">
-<br><button class="btn" onclick="addToCart('Ariel',160,'qty4')">Add</button>
-</div>
+<div class="card"><img src="ariel.jpg"><h3>Ariel</h3><div class="price">₹160</div><div class="stock">In Stock</div><input type="number" id="qty4" value="1" min="1"><br><button class="btn" onclick="addToCart('Ariel',160,'qty4')">Add</button></div>
 
 </div>
 
-<!-- CART -->
 <h2 style="text-align:center">🛒 Your Cart</h2>
 <div id="cart" style="text-align:center"></div>
 
@@ -88,160 +54,92 @@ input,select{padding:6px;margin:5px;}
 <button class="btn" onclick="placeOrder()">Place Order on WhatsApp</button>
 </div>
 
-<!-- ADMIN PANEL YAHAN PASTE KARO -->
 <div style="text-align:center;margin-top:30px;">
-<button onclick="showAdmin()" style="background:#444;color:white;border:none;padding:6px 10px;border-radius:6px;">
-Admin
-</button>
-
+<button onclick="showAdmin()">Admin</button>
 <div id="adminPanel" style="display:none;margin-top:10px;">
-<input type="password" id="adminPass" placeholder="Enter Password">
 <button onclick="resetStock()">Reset Stock</button>
 </div>
 </div>
 
-
-
 <script>
-var orderCounter=localStorage.getItem("orderNo") || 1001;
 
+var orderCounter=localStorage.getItem("orderNo") || 1001;
 var phone="919983729301";
 var cart=[];
 
-var stockData={
-Maggi:10,
-Kurkure:5,
-Bhujia:0,
-Ariel:1
-};
+var stockData={Maggi:24,Kurkure:9,Bhujia:2,Ariel:1};
+
+function updateStockDisplay(){
+document.querySelectorAll(".card").forEach(card=>{
+let name=card.querySelector("h3").innerText;
+let stock=stockData[name];
+card.querySelector(".stock").innerText="In Stock: "+stock;
+});
+}
 
 function addToCart(name,price,qtyId){
 let qty=parseInt(document.getElementById(qtyId).value);
-if(isNaN(qty)||qty<=0){alert("Enter valid qty");return;}
-if(qty>stockData[name]){alert("Only "+stockData[name]+" left");return;}
+if(qty<=0||isNaN(qty))return alert("Enter valid qty");
+if(qty>stockData[name])return alert("Only "+stockData[name]+" left");
 cart.push({name,price,qty});
 showCart();
 }
 
 function showCart(){
-let text=""; 
-let total=0;
-
-cart.forEach((item,index)=>{
-let sub=item.price*item.qty;
-total+=sub;
-
-text+=`
-<div style="margin:6px;">
-${item.name} × ${item.qty} = ₹${sub}
-<button onclick="removeItem(${index})" style="margin-left:10px;background:red;color:white;border:none;border-radius:4px;">❌</button>
-</div>
-`;
+let text="";let total=0;
+cart.forEach((item,i)=>{
+let sub=item.price*item.qty; total+=sub;
+text+=`${item.name} × ${item.qty} = ₹${sub} <button onclick="removeItem(${i})">❌</button><br>`;
 });
-
 text+="<br><b>Total: ₹"+total+"</b>";
-
 document.getElementById("cart").innerHTML=text;
 }
 
+function removeItem(i){cart.splice(i,1);showCart();}
 
-function getDeliveryCharge(){
-let hour=new Date().getHours();
-if(hour>=15 && hour<20) return 10;
-if(hour>=20) return 20;
-return 0;
-}
-
-function serviceOpen(){
-let hour=new Date().getHours();
-return !(hour>=9 && hour<15);
-}
+function getDeliveryCharge(){let h=new Date().getHours(); if(h>=15&&h<20)return 10; if(h>=20)return 20; return 0;}
+function serviceOpen(){let h=new Date().getHours(); return !(h>=9&&h<15);}
 
 function placeOrder(){
-orderCounter++;
-localStorage.setItem("orderNo",orderCounter);
 
-if(!serviceOpen()){alert("Service not available");return;}
-if(cart.length==0){alert("Cart empty");return;}
-let orderTotal=0;
-cart.forEach(item=>{ orderTotal+=item.price*item.qty; });
+if(!serviceOpen())return alert("Service not available");
+if(cart.length==0)return alert("Cart empty");
 
-if(orderTotal<20){
-alert("Minimum order ₹20 required");
-return;
-}
+let orderTotal=cart.reduce((a,b)=>a+b.price*b.qty,0);
+if(orderTotal<20)return alert("Minimum order ₹20 required");
 
-let name=document.getElementById("custName").value;
-let room=document.getElementById("roomNo").value;
-let pay=document.getElementById("payment").value;
-let utr=document.getElementById("utr").value;
+orderCounter++; localStorage.setItem("orderNo",orderCounter);
 
-if(name==""||room==""){alert("Enter name and room number");return;}
+let name=custName.value, room=roomNo.value, pay=payment.value, utr=document.getElementById("utr").value;
+if(!name||!room)return alert("Enter name & room");
+if(pay!="Cash"&&!utr)return alert("Enter payment reference");
 
-let time=new Date().toLocaleTimeString();
-
-let msg="🧾 HOSTEL STORE ORDER%0A%0A";
-  msg+=`🆔 Order No: ${orderCounter}%0A%0A`;
-
-msg+=`👤 Name: ${name}%0A`;
-msg+=`🏠 Room: ${room}%0A`;
-msg+=`💳 Payment: ${pay}%0A`;
-msg+=`🔢 Ref: ${utr}%0A%0A`;
-
-msg+="📦 ITEMS%0A";
+let msg=`🧾 HOSTEL STORE ORDER%0A%0A🆔 Order No: ${orderCounter}%0A%0A👤 Name: ${name}%0A🏠 Room: ${room}%0A💳 Payment: ${pay}%0A🔢 Ref: ${utr}%0A%0A📦 ITEMS%0A`;
 
 let total=0;
-
 cart.forEach(item=>{
-let sub=item.price*item.qty;
-total+=sub;
+let sub=item.price*item.qty; total+=sub;
 msg+=`• ${item.name} x${item.qty} = ₹${sub}%0A`;
 stockData[item.name]-=item.qty;
 });
 
-let delivery=getDeliveryCharge();
-total+=delivery;
+let delivery=getDeliveryCharge(); total+=delivery;
+msg+=`%0A🚚 Delivery: ₹${delivery}%0A----------------------%0A💰 TOTAL: ₹${total}%0A⏰ ${new Date().toLocaleTimeString()}`;
 
-msg+=`%0A🚚 Delivery: ₹${delivery}%0A`;
-msg+="----------------------%0A";
-msg+=`💰 TOTAL: ₹${total}%0A%0A`;
-msg+=`⏰ ${time}`;
+window.open(`https://wa.me/${phone}?text=${msg}`);
 
-
-window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
-cart=[];
-showCart();
+cart=[]; showCart(); updateStockDisplay();
+custName.value=""; roomNo.value=""; utr.value="";
 }
 
-/* ADMIN PANEL */
-function showAdmin(){
-let pass=prompt("Enter Admin Password");
-if(pass==="291"){
-document.getElementById("adminPanel").style.display="block";
-}else{
-alert("Wrong password");
-}
-}
+function showAdmin(){ if(prompt("Password")==="291") adminPanel.style.display="block"; }
+function resetStock(){ stockData={Maggi:24,Kurkure:9,Bhujia:2,Ariel:1}; updateStockDisplay(); }
 
-function resetStock(){
-stockData={Maggi:10,Kurkure:5,Bhujia:0,Ariel:1};
-showCart();
-alert("Stock Reset Done");
-}
-
-  function removeItem(i){
-cart.splice(i,1);
-showCart();
-}
+updateStockDisplay();
 
 </script>
-
-
-  
-
 </body>
 </html>
-
 
 
 
