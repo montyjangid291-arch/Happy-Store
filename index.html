@@ -147,6 +147,22 @@ if(mode==="pickup")return 0;
 let h=new Date().getHours();
 return (h>=8&&h<19)?10:20;
 }
+async function generateBillImage(text){
+document.getElementById("billContent").innerHTML=text.replace(/%0A/g,"<br>");
+
+let billBox=document.getElementById("billBox");
+billBox.style.opacity="1";
+
+await new Promise(r=>setTimeout(r,200));
+
+let canvas=await html2canvas(billBox);
+let a=document.createElement("a");
+a.download="bill.png";
+a.href=canvas.toDataURL("image/png");
+a.click();
+
+billBox.style.opacity="0";
+}
 
 /* ---------- PLACE ORDER ---------- */
 function placeOrder(){
@@ -177,7 +193,8 @@ msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A`;
 
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
-window.open(`https://wa.me/${phone}?text=${msg}`);
+window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
+
 cart=[];showCart();updateStockDisplay();
 }
 
@@ -195,8 +212,18 @@ lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
 }
 </script>
 
+  <!-- BILL IMAGE CONTAINER -->
+<div id="billBox" style="position:fixed;top:0;left:0;opacity:0;background:white;padding:15px;font-family:monospace;width:280px;border:1px solid #000">
+<h3 style="text-align:center;margin:0;">HOSTEL STORE</h3>
+<hr>
+<div id="billContent"></div>
+<hr>
+<div style="text-align:center">Thank You</div>
+</div>
+
 </body>
 </html>
+
 
 
 
