@@ -17,6 +17,12 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 .stock{font-size:14px;margin-bottom:5px;}
 .btn{background:#25D366;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:5px;}
 .infoBar{background:#e2f0ff;padding:6px;text-align:center;}
+  .weight{
+font-size:13px;
+color:#555;
+margin-bottom:4px;
+}
+
 </style>
 </head>
 
@@ -52,10 +58,13 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 </div>
 
 <div class="container">
-<div class="card"><img src="maggi.jpg"><h3>Maggi</h3><div class="price">₹20</div><div class="stock"></div><input type="number" id="qty1" value="1"><br><button class="btn" onclick="addToCart('Maggi',20,'qty1')">Add</button></div>
-<div class="card"><img src="kurkure.jpg"><h3>Kurkure</h3><div class="price">₹20</div><div class="stock"></div><input type="number" id="qty2" value="1"><br><button class="btn" onclick="addToCart('Kurkure',20,'qty2')">Add</button></div>
-<div class="card"><img src="bhujia.jpg"><h3>Bhujia</h3><div class="price">₹300</div><div class="stock"></div><input type="number" id="qty3" value="1"><br><button class="btn" onclick="addToCart('Bhujia',300,'qty3')">Add</button></div>
-<div class="card"><img src="ariel.jpg"><h3>Ariel</h3><div class="price">₹160</div><div class="stock"></div><input type="number" id="qty4" value="1"><br><button class="btn" onclick="addToCart('Ariel',160,'qty4')">Add</button></div>
+<div class="card"><img src="maggi.jpg"><h3>Maggi</h3>
+<div class="weight">70g Pack</div>
+<div class="price">₹20</div>
+<div class="stock"></div><input type="number" id="qty1" value="1"><br><button class="btn" onclick="addToCart('Maggi',20,'qty1')">Add</button></div>
+<div class="card"><img src="kurkure.jpg"><h3>Kurkure</h3><div class="weight">75g Pack</div><div class="price">₹20</div><div class="stock"></div><input type="number" id="qty2" value="1"><br><button class="btn" onclick="addToCart('Kurkure',20,'qty2')">Add</button></div>
+<div class="card"><img src="bhujia.jpg"><h3>Bhujia</h3><div class="weight">1kg Pack</div><div class="price">₹300</div><div class="stock"></div><input type="number" id="qty3" value="1"><br><button class="btn" onclick="addToCart('Bhujia',300,'qty3')">Add</button></div>
+<div class="card"><img src="ariel.jpg"><h3>Ariel</h3><div class="weight">1L Pack</div><div class="price">₹160</div><div class="stock"></div><input type="number" id="qty4" value="1"><br><button class="btn" onclick="addToCart('Ariel',160,'qty4')">Add</button></div>
 </div>
 
 <h2 style="text-align:center">🛒 Cart</h2>
@@ -280,7 +289,7 @@ localStorage.setItem("orderNo",++orderCounter);
 cart=[];showCart();updateStockDisplay();
 }
 
-function showAdmin(){if(prompt("Password")==="291"){adminPanel.style.display="block"}}
+function showAdmin(){if(prompt("Password")==="@monty291"){adminPanel.style.display="block"}}
 function saveStock(){stockData={Maggi:+sMaggi.value,Kurkure:+sKurkure.value,Bhujia:+sBhujia.value,Ariel:+sAriel.value};localStorage.setItem("storeStock",JSON.stringify(stockData));updateStockDisplay();}
 function resetStock(){localStorage.removeItem("storeStock");location.reload();}
 function toggleStore(){let c=localStorage.getItem("storeClosed")==="true";localStorage.setItem("storeClosed",!c);updateStoreStatus();}
@@ -322,6 +331,7 @@ alert("This Month Total ₹"+total);
 
 </body>
 </html>
+
 
 
 
