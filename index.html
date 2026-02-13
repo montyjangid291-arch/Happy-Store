@@ -79,13 +79,32 @@ Bhujia <input id="sBhujia" type="number"><br>
 Ariel <input id="sAriel" type="number"><br>
 
 <button onclick="saveStock()">Save Stock</button>
+  <button onclick="showReport()">Today Report</button>
+
 <button onclick="resetStock()">Reset</button>
 <button onclick="toggleStore()">Open/Close</button>
+  <button onclick="saveStock()">Save Stock</button>
+<button onclick="resetStock()">Reset</button>
+<button onclick="toggleStore()">Open/Close</button>
+
+<hr>
+<h3>Purchase Price (Profit)</h3>
+
+Maggi Buy ₹ <input id="bMaggi" type="number"><br>
+Kurkure Buy ₹ <input id="bKurkure" type="number"><br>
+Bhujia Buy ₹ <input id="bBhujia" type="number"><br>
+Ariel Buy ₹ <input id="bAriel" type="number"><br>
+
+<button onclick="saveBuyPrice()">Save Buy Price</button>
+
+<div id="profitBox">Today Profit: ₹0</div>
+
 </div>
 </div>
 
 <!-- BILL -->
-<div id="billBox" style="position:fixed;top:0;left:0;opacity:0;background:white;padding:15px;font-family:monospace;width:280px;border:1px solid #000">
+<div id="billBox" style="position:fixed;left:-9999px;top:0;opacity:0;background:white;padding:15px;font-family:monospace;width:280px;border:1px solid #000">
+
 <h3 style="text-align:center;margin:0;">HOSTEL STORE</h3>
 <hr>
 <div id="billContent"></div>
@@ -144,12 +163,48 @@ return (h>=8&&h<19)?10:20;
 }
 
 async function generateBillImage(text){
-document.getElementById("billContent").innerHTML=text.replace(/\n/g,"<br>");
-let canvas=await html2canvas(document.getElementById("billBox"));
-let a=document.createElement("a");
-a.download="bill.png";
-a.href=canvas.toDataURL("image/png");
-a.click();
+
+/* 1 — text set karo */
+let clean=text
+.replace(/\n/g,"<br>")
+.replace(/🧾/g,"")
+.replace(/🆔/g,"Order No:")
+.replace(/👤/g,"Name:")
+.replace(/🏠/g,"Room:")
+.replace(/🏢/g,"Hostel:")
+.replace(/📦/g,"Mode:")
+.replace(/🚚/g,"Delivery:")
+.replace(/💰/g,"Total:");
+
+document.getElementById("billContent").innerHTML=clean;
+
+
+/* 2 — element visible banao */
+let billBox=document.getElementById("billBox");
+billBox.style.position="fixed";
+billBox.style.top="50%";
+billBox.style.left="50%";
+billBox.style.transform="translate(-50%,-50%)";
+billBox.style.opacity="1";
+
+/* 3 — render hone ka wait */
+await new Promise(r=>setTimeout(r,400));
+
+/* 4 — screenshot */
+let canvas=await html2canvas(billBox,{
+backgroundColor:"#ffffff",
+scale:2
+});
+
+/* 5 — download */
+let link=document.createElement("a");
+link.download="bill.png";
+link.href=canvas.toDataURL("image/png");
+link.click();
+
+/* 6 — hide again */
+billBox.style.opacity="0";
+billBox.style.left="-9999px";
 }
 
 function placeOrder(){
@@ -187,6 +242,17 @@ let s=i.price*i.qty;
 total+=s;
 msg+=`${i.name} x${i.qty} = ₹${s}\n`;
 stockData[i.name]-=i.qty;
+  /* SAVE SALES DATA */
+let today=new Date().toLocaleDateString();
+let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+
+if(!sales[today]) sales[today]={items:{},total:0};
+
+sales[today].items[i.name]=(sales[today].items[i.name]||0)+i.qty;
+sales[today].total+=s;
+
+localStorage.setItem("salesData",JSON.stringify(sales));
+
 });
 
 let d=getDeliveryCharge(mode);
@@ -209,10 +275,45 @@ function showAdmin(){if(prompt("Password")==="291"){adminPanel.style.display="bl
 function saveStock(){stockData={Maggi:+sMaggi.value,Kurkure:+sKurkure.value,Bhujia:+sBhujia.value,Ariel:+sAriel.value};localStorage.setItem("storeStock",JSON.stringify(stockData));updateStockDisplay();}
 function resetStock(){localStorage.removeItem("storeStock");location.reload();}
 function toggleStore(){let c=localStorage.getItem("storeClosed")==="true";localStorage.setItem("storeClosed",!c);updateStoreStatus();}
+function showReport(){
+
+let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+let text="📊 TODAY REPORT\n\n";
+
+let today=new Date().toLocaleDateString();
+
+if(!sales[today]){
+alert("No sales today");
+return;
+}
+
+for(let item in sales[today].items){
+text+=item+" x "+sales[today].items[item]+"\n";
+}
+
+text+="\nTotal ₹"+sales[today].total;
+
+alert(text);
+}
+  function monthlyReport(){
+
+let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+let month=new Date().getMonth();
+let total=0;
+
+for(let date in sales){
+let d=new Date(date);
+if(d.getMonth()==month) total+=sales[date].total;
+}
+
+alert("This Month Total ₹"+total);
+}
+
 </script>
 
 </body>
 </html>
+
 
 
 
