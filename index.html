@@ -25,7 +25,13 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 <body>
 
 <header>🛒 My Hostel Store</header>
+
+<div id="storeStatus" style="text-align:center;padding:6px;background:#d4edda;color:#155724;">
+STORE OPEN
+</div>
+
 <div id="topItem" class="infoBar">Top Item: -</div>
+
 
 <h2 style="text-align:center">Customer Details</h2>
 <div style="text-align:center;margin-bottom:20px;">
@@ -111,13 +117,7 @@ checkLowStock();
 }
 updateStockDisplay();
 
-function addToCart(name,price,id){
-let q=parseInt(document.getElementById(id).value);
-if(q<=0||q>stockData[name])return alert("Invalid quantity");
-cart.push({name,price,qty:q});
-showCart();
-}
-
+function addToCart
 function showCart(){
 let html="",t=0;
 cart.forEach((i,x)=>{let s=i.price*i.qty;t+=s;html+=`${i.name} x${i.qty}=₹${s} <button onclick="removeItem(${x})">❌</button><br>`});
@@ -176,7 +176,10 @@ return;
 }
 
 
-let total=0,msg=`🧾 ORDER%0A🆔 ${orderCounter}%0A👤 ${name}%0A🏠 ${room}%0A🏢 ${hostel}%0A📦 ${mode}%0A%0A`;
+let cancelCode = "CANCEL " + orderCounter;
+
+let total=0,msg=`🧾 ORDER%0A🆔 ${orderCounter}%0A❌ Cancel Code: ${cancelCode}%0A👤 ${name}%0A🏠 ${room}%0A🏢 ${hostel}%0A📦 ${mode}%0A%0A`;
+
 cart.forEach(i=>{let s=i.price*i.qty;total+=s;msg+=`• ${i.name} x${i.qty}=₹${s}%0A`;stockData[i.name]-=i.qty;});
 function getDeliveryCharge(mode){
 
@@ -197,7 +200,7 @@ let d=getDeliveryCharge(mode);
 total+=d;
 
 if(mode==="pickup")msg+=`📍 Collect From Room: 605%0A`;
-msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A⏱10-15 min`;
+msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A⏱10-15 min%0A%0ATo cancel send: ${cancelCode}`;
 
 generateBillImage(msg);
 updateEarnings(total);
@@ -228,14 +231,29 @@ earningsBox.innerText="Today Earnings: ₹"+d[t];
 
 function saveOrder(no,n,r,t){
 let o=JSON.parse(localStorage.getItem("orders")||"[]");
-o.push({no,n,r,t});
+o.push({no,n,r,t,delivery:"Not Assigned"});
+localStorage.setItem("orders",JSON.stringify(o));
+showOrders();
+}
+  
+function assign(i){
+let name=prompt("Delivery boy name:");
+if(!name) return;
+
+let o=JSON.parse(localStorage.getItem("orders")||"[]");
+o[i].delivery=name;
 localStorage.setItem("orders",JSON.stringify(o));
 showOrders();
 }
 
+
 function showOrders(){
 let o=JSON.parse(localStorage.getItem("orders")||"[]"),h="";
-o.forEach((x,i)=>h+=`#${x.no} ${x.n} ₹${x.t} <button onclick="done(${i})">✔</button><br>`);
+o.forEach((x,i)=>{
+h+=`#${x.no} ${x.n} ₹${x.t} — 🚴 ${x.delivery}
+<button onclick="assign(${i})">Assign</button>
+<button onclick="done(${i})">✔</button><br>`;
+});
 ordersList.innerHTML=h;
 }
 function done(i){let o=JSON.parse(localStorage.getItem("orders")||"[]");o.splice(i,1);localStorage.setItem("orders",JSON.stringify(o));showOrders();}
@@ -251,8 +269,35 @@ if(prompt("Password")==="291"){adminPanel.style.display="block";showOrders();}
 }
 function saveStock(){stockData={Maggi:+sMaggi.value,Kurkure:+sKurkure.value,Bhujia:+sBhujia.value,Ariel:+sAriel.value};localStorage.setItem("storeStock",JSON.stringify(stockData));updateStockDisplay();}
 function resetStock(){localStorage.removeItem("storeStock");location.reload();}
-function toggleStore(){let s=localStorage.getItem("storeClosed")==="true";localStorage.setItem("storeClosed",!s);alert(!s?"Closed":"Opened");}
+function toggleStore(){
+let closed = localStorage.getItem("storeClosed")==="true";
 
+if(closed){
+localStorage.setItem("storeClosed","false");
+alert("Store Opened");
+}else{
+localStorage.setItem("storeClosed","true");
+alert("Store Closed");
+}
+
+updateStoreStatus();
+}
+
+  function toggleStore(){
+let closed = localStorage.getItem("storeClosed")==="true";
+
+if(closed){
+localStorage.setItem("storeClosed","false");
+alert("Store Opened");
+}else{
+localStorage.setItem("storeClosed","true");
+alert("Store Closed");
+}
+
+updateStoreStatus();
+}
+
+  
 function showTop(){
 let s=JSON.parse(localStorage.getItem("orders")||"[]"),c={};
 s.forEach(o=>c[o.n]=(c[o.n]||0)+1);
@@ -260,10 +305,13 @@ let m="-",mx=0;for(let k in c)if(c[k]>mx){mx=c[k];m=k}
 topItem.innerText="Top Item: "+m;
 }
 showTop();
+updateStoreStatus();
 </script>
+
 
 </body>
 </html>
+
 
 
 
