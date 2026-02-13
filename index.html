@@ -155,7 +155,8 @@ if(cart.length==0)return alert("Cart empty");
 
 let name=custName.value.trim();
 let room=roomNo.value.trim();
-let hostel=hostelSelect.value;
+let hostel=document.getElementById("hostel").value;
+
 let pay=payment.value;
 let utr=document.getElementById("utr").value.trim();
 let mode=document.getElementById("mode").value;
@@ -196,6 +197,7 @@ lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
 
 </body>
 </html>
+
 
 
 
