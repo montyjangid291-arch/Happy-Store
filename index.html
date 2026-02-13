@@ -148,7 +148,19 @@ let h=new Date().getHours();
 return (h>=8&&h<19)?10:20;
 }
 async function generateBillImage(text){
-document.getElementById("billContent").innerHTML=text.replace(/%0A/g,"<br>");
+let clean=text
+.replace(/%0A/g,"<br>")
+.replace(/🧾/g,"")
+.replace(/🆔/g,"Order No:")
+.replace(/👤/g,"Name:")
+.replace(/🏠/g,"Room:")
+.replace(/🏢/g,"Hostel:")
+.replace(/📦/g,"Mode:")
+.replace(/🚚/g,"Delivery:")
+.replace(/💰/g,"Total:");
+
+document.getElementById("billContent").innerHTML=clean;
+
 
 let billBox=document.getElementById("billBox");
 billBox.style.opacity="1";
@@ -173,7 +185,8 @@ let name=custName.value.trim();
 let room=roomNo.value.trim();
 let hostel=document.getElementById("hostel").value;
 
-let pay=payment.value;
+let pay=document.getElementById("payment").value;
+
 let utr=document.getElementById("utr").value.trim();
 let mode=document.getElementById("mode").value;
 
@@ -193,6 +206,8 @@ msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A`;
 
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
+  generateBillImage(msg);
+
 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
 
 cart=[];showCart();updateStockDisplay();
@@ -223,6 +238,7 @@ lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
 
 </body>
 </html>
+
 
 
 
