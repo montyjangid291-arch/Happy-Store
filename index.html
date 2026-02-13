@@ -25,13 +25,8 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 <body>
 
 <header>🛒 My Hostel Store</header>
-
-<div id="storeStatus" style="text-align:center;padding:6px;background:#d4edda;color:#155724;">
-STORE OPEN
-</div>
-
+<div id="storeStatus" style="text-align:center;padding:6px;background:#d4edda;color:#155724;">STORE OPEN</div>
 <div id="topItem" class="infoBar">Top Item: -</div>
-
 
 <h2 style="text-align:center">Customer Details</h2>
 <div style="text-align:center;margin-bottom:20px;">
@@ -94,17 +89,23 @@ Ariel <input id="sAriel" type="number"><br>
 
 <audio id="ding" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
-<div id="billBox" style="position:absolute;left:-9999px;background:white;padding:15px;font-family:monospace">
-<h3 style="text-align:center">HOSTEL STORE</h3>
-<div id="billContent"></div>
-</div>
-
 <script>
 var phone="919983729301";
 var cart=[];
-var orderCounter=localStorage.getItem("orderNo")||1001;
+var orderCounter=parseInt(localStorage.getItem("orderNo")||1001);
 var stockData=JSON.parse(localStorage.getItem("storeStock"))||{Maggi:24,Kurkure:9,Bhujia:2,Ariel:1};
 
+/* ---------- STORE STATUS ---------- */
+function updateStoreStatus(){
+let closed=localStorage.getItem("storeClosed")==="true";
+let bar=document.getElementById("storeStatus");
+bar.innerText=closed?"STORE CLOSED":"STORE OPEN";
+bar.style.background=closed?"#f8d7da":"#d4edda";
+bar.style.color=closed?"#721c24":"#155724";
+}
+updateStoreStatus();
+
+/* ---------- STOCK DISPLAY ---------- */
 function updateStockDisplay(){
 document.querySelectorAll(".card").forEach(card=>{
 let name=card.querySelector("h3").innerText;
@@ -117,7 +118,21 @@ checkLowStock();
 }
 updateStockDisplay();
 
-function addToCart
+/* ---------- ADD TO CART ---------- */
+function addToCart(name,price,id){
+let q=parseInt(document.getElementById(id).value);
+if(q<=0||isNaN(q))return alert("Enter valid quantity");
+
+let already=0;
+cart.forEach(i=>{if(i.name===name)already+=i.qty});
+let available=stockData[name]-already;
+if(q>available)return alert("Only "+available+" left");
+
+let found=cart.find(i=>i.name===name);
+if(found)found.qty+=q; else cart.push({name,price,qty:q});
+showCart();
+}
+
 function showCart(){
 let html="",t=0;
 cart.forEach((i,x)=>{let s=i.price*i.qty;t+=s;html+=`${i.name} x${i.qty}=₹${s} <button onclick="removeItem(${x})">❌</button><br>`});
@@ -126,191 +141,62 @@ document.getElementById("cart").innerHTML=html;
 }
 function removeItem(i){cart.splice(i,1);showCart();}
 
+/* ---------- DELIVERY CHARGE ---------- */
+function getDeliveryCharge(mode){
+if(mode==="pickup")return 0;
+let h=new Date().getHours();
+return (h>=8&&h<19)?10:20;
+}
+
+/* ---------- PLACE ORDER ---------- */
 function placeOrder(){
 if(localStorage.getItem("storeClosed")==="true")return alert("Store Closed");
 if(cart.length==0)return alert("Cart empty");
 
-let name = custName.value.trim();
-let room = roomNo.value.trim();
-let hostel = document.getElementById("hostel").value;
-let pay = document.getElementById("payment").value;
-let utr = document.getElementById("utr").value.trim();
-let mode = document.getElementById("mode").value;
+let name=custName.value.trim();
+let room=roomNo.value.trim();
+let hostel=hostelSelect.value;
+let pay=payment.value;
+let utr=document.getElementById("utr").value.trim();
+let mode=document.getElementById("mode").value;
 
-/* STRICT VALIDATION */
+/* validation */
+if(!/^[A-Za-z ]+$/.test(name))return alert("Invalid name");
+if(!/^[0-9]+$/.test(room))return alert("Room must be number");
+if(hostel==="Girls Hostel")return alert("Not available for girls hostel");
+if(pay!=="Cash"&&!/^[0-9]{4,12}$/.test(utr))return alert("Invalid UPI ref");
 
-// Name → only English letters
-if(!/^[A-Za-z ]+$/.test(name)){
-alert("Name must contain only English letters");
-return;
-}
+let cancelCode="CANCEL "+orderCounter;
+let total=0,msg=`🧾 ORDER%0A🆔 ${orderCounter}%0A❌ ${cancelCode}%0A👤 ${name}%0A🏠 ${room}%0A🏢 ${hostel}%0A📦 ${mode}%0A%0A`;
 
-// Room → only numbers
-if(!/^[0-9]+$/.test(room)){
-alert("Room number must be digits only");
-return;
-}
-
-// Hostel restriction
-if(hostel==="Girls Hostel"){
-alert("Service not available for Girls Hostel");
-return;
-}
-
-// Payment required
-if(!pay){
-alert("Select payment method");
-return;
-}
-
-// UPI reference digits only
-if(pay!=="Cash" && !/^[0-9]{4,12}$/.test(utr)){
-alert("Enter valid UPI reference (4-12 digits)");
-return;
-}
-
-// Mode required
-if(!mode){
-alert("Select delivery or pickup");
-return;
-}
-
-
-let cancelCode = "CANCEL " + orderCounter;
-
-let total=0,msg=`🧾 ORDER%0A🆔 ${orderCounter}%0A❌ Cancel Code: ${cancelCode}%0A👤 ${name}%0A🏠 ${room}%0A🏢 ${hostel}%0A📦 ${mode}%0A%0A`;
-
-cart.forEach(i=>{let s=i.price*i.qty;total+=s;msg+=`• ${i.name} x${i.qty}=₹${s}%0A`;stockData[i.name]-=i.qty;});
-function getDeliveryCharge(mode){
-
-// pickup free
-if(mode==="pickup") return 0;
-
-let hour = new Date().getHours();
-
-// 8am to 7pm
-if(hour>=8 && hour<19){
-return 10;
-}
-
-// night
-return 20;
-}
-let d=getDeliveryCharge(mode);
-total+=d;
-
+cart.forEach(i=>{let s=i.price*i.qty;total+=s;msg+=`• ${i.name} x${i.qty}=₹${s}%0A`;stockData[i.name]-=i.qty});
+let d=getDeliveryCharge(mode); total+=d;
 if(mode==="pickup")msg+=`📍 Collect From Room: 605%0A`;
-msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A⏱10-15 min%0A%0ATo cancel send: ${cancelCode}`;
+msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A`;
 
-generateBillImage(msg);
-updateEarnings(total);
-saveOrder(orderCounter,name,room,total);
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
-ding.play();
 window.open(`https://wa.me/${phone}?text=${msg}`);
-
 cart=[];showCart();updateStockDisplay();
 }
 
-async function generateBillImage(text){
-billContent.innerHTML=text.replace(/%0A/g,"<br>");
-let canvas=await html2canvas(billBox);
-let a=document.createElement("a");
-a.download="bill.png";
-a.href=canvas.toDataURL();
-a.click();
-}
-
-function updateEarnings(a){
-let t=new Date().toDateString(),d=JSON.parse(localStorage.getItem("earnings")||"{}");
-d[t]=(d[t]||0)+a;
-localStorage.setItem("earnings",JSON.stringify(d));
-earningsBox.innerText="Today Earnings: ₹"+d[t];
-}
-
-function saveOrder(no,n,r,t){
-let o=JSON.parse(localStorage.getItem("orders")||"[]");
-o.push({no,n,r,t,delivery:"Not Assigned"});
-localStorage.setItem("orders",JSON.stringify(o));
-showOrders();
-}
-  
-function assign(i){
-let name=prompt("Delivery boy name:");
-if(!name) return;
-
-let o=JSON.parse(localStorage.getItem("orders")||"[]");
-o[i].delivery=name;
-localStorage.setItem("orders",JSON.stringify(o));
-showOrders();
-}
-
-
-function showOrders(){
-let o=JSON.parse(localStorage.getItem("orders")||"[]"),h="";
-o.forEach((x,i)=>{
-h+=`#${x.no} ${x.n} ₹${x.t} — 🚴 ${x.delivery}
-<button onclick="assign(${i})">Assign</button>
-<button onclick="done(${i})">✔</button><br>`;
-});
-ordersList.innerHTML=h;
-}
-function done(i){let o=JSON.parse(localStorage.getItem("orders")||"[]");o.splice(i,1);localStorage.setItem("orders",JSON.stringify(o));showOrders();}
-
-function checkLowStock(){
-let w=[];
-for(let k in stockData) if(stockData[k]<=5) w.push(k+"("+stockData[k]+")");
-lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
-}
-
-function showAdmin(){
-if(prompt("Password")==="291"){adminPanel.style.display="block";showOrders();}
-}
+/* ---------- ADMIN ---------- */
+function showAdmin(){if(prompt("Password")==="291"){adminPanel.style.display="block"}}
 function saveStock(){stockData={Maggi:+sMaggi.value,Kurkure:+sKurkure.value,Bhujia:+sBhujia.value,Ariel:+sAriel.value};localStorage.setItem("storeStock",JSON.stringify(stockData));updateStockDisplay();}
 function resetStock(){localStorage.removeItem("storeStock");location.reload();}
-function toggleStore(){
-let closed = localStorage.getItem("storeClosed")==="true";
+function toggleStore(){let c=localStorage.getItem("storeClosed")==="true";localStorage.setItem("storeClosed",!c);updateStoreStatus();}
 
-if(closed){
-localStorage.setItem("storeClosed","false");
-alert("Store Opened");
-}else{
-localStorage.setItem("storeClosed","true");
-alert("Store Closed");
+/* ---------- LOW STOCK ---------- */
+function checkLowStock(){
+let w=[];
+for(let k in stockData)if(stockData[k]<=5)w.push(k+"("+stockData[k]+")");
+lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
 }
-
-updateStoreStatus();
-}
-
-  function toggleStore(){
-let closed = localStorage.getItem("storeClosed")==="true";
-
-if(closed){
-localStorage.setItem("storeClosed","false");
-alert("Store Opened");
-}else{
-localStorage.setItem("storeClosed","true");
-alert("Store Closed");
-}
-
-updateStoreStatus();
-}
-
-  
-function showTop(){
-let s=JSON.parse(localStorage.getItem("orders")||"[]"),c={};
-s.forEach(o=>c[o.n]=(c[o.n]||0)+1);
-let m="-",mx=0;for(let k in c)if(c[k]>mx){mx=c[k];m=k}
-topItem.innerText="Top Item: "+m;
-}
-showTop();
-updateStoreStatus();
 </script>
-
 
 </body>
 </html>
+
 
 
 
