@@ -147,17 +147,23 @@ if(mode==="pickup")return 0;
 let h=new Date().getHours();
 return (h>=8&&h<19)?10:20;
 }
-async function generateBillImage(text){
-let clean=text
-.replace(/%0A/g,"<br>")
-.replace(/🧾/g,"")
-.replace(/🆔/g,"Order No:")
-.replace(/👤/g,"Name:")
-.replace(/🏠/g,"Room:")
-.replace(/🏢/g,"Hostel:")
-.replace(/📦/g,"Mode:")
-.replace(/🚚/g,"Delivery:")
-.replace(/💰/g,"Total:");
+async function generateBillImage(html){
+document.getElementById("billContent").innerHTML = html;
+
+let billBox=document.getElementById("billBox");
+billBox.style.opacity="1";
+
+await new Promise(r=>setTimeout(r,300));
+
+let canvas=await html2canvas(billBox);
+let a=document.createElement("a");
+a.download="bill.png";
+a.href=canvas.toDataURL("image/png");
+a.click();
+
+billBox.style.opacity="0";
+}
+;
 
 document.getElementById("billContent").innerHTML=clean;
 
@@ -199,43 +205,60 @@ if(pay!=="Cash"&&!/^[0-9]{4,12}$/.test(utr))return alert("Invalid UPI ref");
 let cancelCode = "CANCEL " + orderCounter;
 let total = 0;
 
-let msg = `🧾 HOSTEL STORE ORDER
+let textMsg = 
+`HOSTEL STORE ORDER%0A
+Order No: ${orderCounter}%0A
+Cancel Code: ${cancelCode}%0A
+Name: ${name}%0A
+Room No: ${room}%0A
+Hostel: ${hostel}%0A
+Mode: ${mode}%0A%0A
+ITEMS%0A`;
 
-🆔 Order No: ${orderCounter}
-❌ Cancel Code: ${cancelCode}
+let billHtml =
+`<b>HOSTEL STORE ORDER</b><br>
+Order No: ${orderCounter}<br>
+Cancel Code: ${cancelCode}<br>
+Name: ${name}<br>
+Room No: ${room}<br>
+Hostel: ${hostel}<br>
+Mode: ${mode}<br><br>
+<b>ITEMS</b><br>`;
 
-👤 Name: ${name}
-🏠 Room No: ${room}
-🏢 Hostel: ${hostel}
-📦 Mode: ${mode}
-
-📋 ITEMS
-`;
 
 cart.forEach(i=>{
 let s=i.price*i.qty;
 total+=s;
-msg+=`• ${i.name} × ${i.qty} = ₹${s}\n`;
+
+textMsg += `• ${i.name} x${i.qty} = ₹${s}%0A`;
+billHtml += `• ${i.name} x${i.qty} = ₹${s}<br>`;
+
 stockData[i.name]-=i.qty;
 });
+
 
 let d=getDeliveryCharge(mode);
 total+=d;
 
-if(mode==="pickup")
-msg+=`\n📍 Collect From Room: 605`;
+if(mode==="pickup"){
+textMsg += `Collect From Room: 605%0A`;
+billHtml += `Collect From Room: 605<br>`;
+}
 
-msg+=`
+textMsg += `Delivery: ₹${d}%0A`;
+textMsg += `Total Payable: ₹${total}%0A`;
+textMsg += `Time: 10-15 min`;
 
-🚚 Delivery: ₹${d}
-💰 Total Payable: ₹${total}
-⏱ Time: 10-15 min`;
+billHtml += `<br>Delivery: ₹${d}<br>`;
+billHtml += `<b>Total Payable: ₹${total}</b><br>`;
+billHtml += `Time: 10-15 min<br><br>`;
+billHtml += `<center><b>Thank You</b></center>`;
 
 
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
-  generateBillImage(msg);
-window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`);
+ generateBillImage(billHtml);
+window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`);
 
 
 cart=[];showCart();updateStockDisplay();
@@ -266,6 +289,7 @@ lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
 
 </body>
 </html>
+
 
 
 
