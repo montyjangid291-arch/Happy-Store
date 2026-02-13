@@ -83,9 +83,7 @@ Ariel <input id="sAriel" type="number"><br>
 
 <button onclick="resetStock()">Reset</button>
 <button onclick="toggleStore()">Open/Close</button>
-  <button onclick="saveStock()">Save Stock</button>
-<button onclick="resetStock()">Reset</button>
-<button onclick="toggleStore()">Open/Close</button>
+ 
 
 <hr>
 <h3>Purchase Price (Profit)</h3>
@@ -137,6 +135,11 @@ btn.disabled=stock<=0;
 updateStockDisplay();
 
 function addToCart(name,price,id){
+  if(localStorage.getItem("storeClosed")==="true"){
+alert("Store Closed");
+return;
+}
+
 let q=parseInt(document.getElementById(id).value);
 if(q<=0||isNaN(q))return alert("Enter valid quantity");
 let already=0;
@@ -208,6 +211,12 @@ billBox.style.left="-9999px";
 }
 
 function placeOrder(){
+  /* STORE CLOSED BLOCK */
+if(localStorage.getItem("storeClosed")==="true"){
+alert("Store is currently closed");
+return;
+}
+
 if(cart.length==0)return alert("Cart empty");
 
 let name=custName.value.trim();
@@ -313,6 +322,7 @@ alert("This Month Total ₹"+total);
 
 </body>
 </html>
+
 
 
 
