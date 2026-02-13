@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -19,7 +18,6 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 .btn{background:#25D366;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:5px;}
 .infoBar{background:#e2f0ff;padding:6px;text-align:center;}
 </style>
-
 </head>
 
 <body>
@@ -67,8 +65,6 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 <button class="btn" onclick="placeOrder()">Place Order on WhatsApp</button>
 </div>
 
-<!-- ADMIN -->
-
 <div style="text-align:center;margin-top:30px;">
 <button onclick="showAdmin()">Admin</button>
 <div id="adminPanel" style="display:none;border:1px solid #ccc;padding:10px;margin-top:10px;">
@@ -82,12 +78,20 @@ Kurkure <input id="sKurkure" type="number"><br>
 Bhujia <input id="sBhujia" type="number"><br>
 Ariel <input id="sAriel" type="number"><br>
 
-<button onclick="saveStock()">Save Stock</button> <button onclick="resetStock()">Reset</button> <button onclick="toggleStore()">Open/Close</button>
-
+<button onclick="saveStock()">Save Stock</button>
+<button onclick="resetStock()">Reset</button>
+<button onclick="toggleStore()">Open/Close</button>
 </div>
 </div>
 
-<audio id="ding" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+<!-- BILL -->
+<div id="billBox" style="position:fixed;top:0;left:0;opacity:0;background:white;padding:15px;font-family:monospace;width:280px;border:1px solid #000">
+<h3 style="text-align:center;margin:0;">HOSTEL STORE</h3>
+<hr>
+<div id="billContent"></div>
+<hr>
+<div style="text-align:center">Thank You</div>
+</div>
 
 <script>
 var phone="919983729301";
@@ -95,17 +99,13 @@ var cart=[];
 var orderCounter=parseInt(localStorage.getItem("orderNo")||1001);
 var stockData=JSON.parse(localStorage.getItem("storeStock"))||{Maggi:24,Kurkure:9,Bhujia:2,Ariel:1};
 
-/* ---------- STORE STATUS ---------- */
 function updateStoreStatus(){
 let closed=localStorage.getItem("storeClosed")==="true";
 let bar=document.getElementById("storeStatus");
 bar.innerText=closed?"STORE CLOSED":"STORE OPEN";
-bar.style.background=closed?"#f8d7da":"#d4edda";
-bar.style.color=closed?"#721c24":"#155724";
 }
 updateStoreStatus();
 
-/* ---------- STOCK DISPLAY ---------- */
 function updateStockDisplay(){
 document.querySelectorAll(".card").forEach(card=>{
 let name=card.querySelector("h3").innerText;
@@ -114,20 +114,16 @@ let btn=card.querySelector("button");
 card.querySelector(".stock").innerText=stock>0?"In Stock: "+stock:"Out of Stock";
 btn.disabled=stock<=0;
 });
-checkLowStock();
 }
 updateStockDisplay();
 
-/* ---------- ADD TO CART ---------- */
 function addToCart(name,price,id){
 let q=parseInt(document.getElementById(id).value);
 if(q<=0||isNaN(q))return alert("Enter valid quantity");
-
 let already=0;
 cart.forEach(i=>{if(i.name===name)already+=i.qty});
 let available=stockData[name]-already;
 if(q>available)return alert("Only "+available+" left");
-
 let found=cart.find(i=>i.name===name);
 if(found)found.qty+=q; else cart.push({name,price,qty:q});
 showCart();
@@ -141,154 +137,83 @@ document.getElementById("cart").innerHTML=html;
 }
 function removeItem(i){cart.splice(i,1);showCart();}
 
-/* ---------- DELIVERY CHARGE ---------- */
 function getDeliveryCharge(mode){
 if(mode==="pickup")return 0;
 let h=new Date().getHours();
 return (h>=8&&h<19)?10:20;
 }
-async function generateBillImage(html){
-document.getElementById("billContent").innerHTML = html;
 
-let billBox=document.getElementById("billBox");
-billBox.style.opacity="1";
-
-await new Promise(r=>setTimeout(r,300));
-
-let canvas=await html2canvas(billBox);
+async function generateBillImage(text){
+document.getElementById("billContent").innerHTML=text.replace(/\n/g,"<br>");
+let canvas=await html2canvas(document.getElementById("billBox"));
 let a=document.createElement("a");
 a.download="bill.png";
 a.href=canvas.toDataURL("image/png");
 a.click();
-
-billBox.style.opacity="0";
-}
-;
-
-document.getElementById("billContent").innerHTML=clean;
-
-
-let billBox=document.getElementById("billBox");
-billBox.style.opacity="1";
-
-await new Promise(r=>setTimeout(r,200));
-
-let canvas=await html2canvas(billBox);
-let a=document.createElement("a");
-a.download="bill.png";
-a.href=canvas.toDataURL("image/png");
-a.click();
-
-billBox.style.opacity="0";
 }
 
-/* ---------- PLACE ORDER ---------- */
 function placeOrder(){
-if(localStorage.getItem("storeClosed")==="true")return alert("Store Closed");
 if(cart.length==0)return alert("Cart empty");
 
 let name=custName.value.trim();
 let room=roomNo.value.trim();
 let hostel=document.getElementById("hostel").value;
-
 let pay=document.getElementById("payment").value;
-
 let utr=document.getElementById("utr").value.trim();
 let mode=document.getElementById("mode").value;
 
-/* validation */
 if(!/^[A-Za-z ]+$/.test(name))return alert("Invalid name");
 if(!/^[0-9]+$/.test(room))return alert("Room must be number");
 if(hostel==="Girls Hostel")return alert("Not available for girls hostel");
 if(pay!=="Cash"&&!/^[0-9]{4,12}$/.test(utr))return alert("Invalid UPI ref");
 
-let cancelCode = "CANCEL " + orderCounter;
-let total = 0;
+let cancelCode="CANCEL "+orderCounter;
+let total=0;
 
-let textMsg = 
-`HOSTEL STORE ORDER%0A
-Order No: ${orderCounter}%0A
-Cancel Code: ${cancelCode}%0A
-Name: ${name}%0A
-Room No: ${room}%0A
-Hostel: ${hostel}%0A
-Mode: ${mode}%0A%0A
-ITEMS%0A`;
+let msg=`HOSTEL STORE ORDER
+Order No: ${orderCounter}
+Cancel Code: ${cancelCode}
 
-let billHtml =
-`<b>HOSTEL STORE ORDER</b><br>
-Order No: ${orderCounter}<br>
-Cancel Code: ${cancelCode}<br>
-Name: ${name}<br>
-Room No: ${room}<br>
-Hostel: ${hostel}<br>
-Mode: ${mode}<br><br>
-<b>ITEMS</b><br>`;
+Name: ${name}
+Room No: ${room}
+Hostel: ${hostel}
+Mode: ${mode}
 
+ITEMS
+`;
 
 cart.forEach(i=>{
 let s=i.price*i.qty;
 total+=s;
-
-textMsg += `• ${i.name} x${i.qty} = ₹${s}%0A`;
-billHtml += `• ${i.name} x${i.qty} = ₹${s}<br>`;
-
+msg+=`${i.name} x${i.qty} = ₹${s}\n`;
 stockData[i.name]-=i.qty;
 });
-
 
 let d=getDeliveryCharge(mode);
 total+=d;
 
-if(mode==="pickup"){
-textMsg += `Collect From Room: 605%0A`;
-billHtml += `Collect From Room: 605<br>`;
-}
+if(mode==="pickup")msg+=`\nCollect From Room: 605`;
 
-textMsg += `Delivery: ₹${d}%0A`;
-textMsg += `Total Payable: ₹${total}%0A`;
-textMsg += `Time: 10-15 min`;
+msg+=`\nDelivery: ₹${d}\nTotal Payable: ₹${total}\nTime: 10-15 min`;
 
-billHtml += `<br>Delivery: ₹${d}<br>`;
-billHtml += `<b>Total Payable: ₹${total}</b><br>`;
-billHtml += `Time: 10-15 min<br><br>`;
-billHtml += `<center><b>Thank You</b></center>`;
-
+generateBillImage(msg);
+window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`);
 
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
- generateBillImage(billHtml);
-window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`);
-
 
 cart=[];showCart();updateStockDisplay();
 }
 
-/* ---------- ADMIN ---------- */
 function showAdmin(){if(prompt("Password")==="291"){adminPanel.style.display="block"}}
 function saveStock(){stockData={Maggi:+sMaggi.value,Kurkure:+sKurkure.value,Bhujia:+sBhujia.value,Ariel:+sAriel.value};localStorage.setItem("storeStock",JSON.stringify(stockData));updateStockDisplay();}
 function resetStock(){localStorage.removeItem("storeStock");location.reload();}
 function toggleStore(){let c=localStorage.getItem("storeClosed")==="true";localStorage.setItem("storeClosed",!c);updateStoreStatus();}
-
-/* ---------- LOW STOCK ---------- */
-function checkLowStock(){
-let w=[];
-for(let k in stockData)if(stockData[k]<=5)w.push(k+"("+stockData[k]+")");
-lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
-}
 </script>
-
-  <!-- BILL IMAGE CONTAINER -->
-<div id="billBox" style="position:fixed;top:0;left:0;opacity:0;background:white;padding:15px;font-family:monospace;width:280px;border:1px solid #000">
-<h3 style="text-align:center;margin:0;">HOSTEL STORE</h3>
-<hr>
-<div id="billContent"></div>
-<hr>
-<div style="text-align:center">Thank You</div>
-</div>
 
 </body>
 </html>
+
 
 
 
