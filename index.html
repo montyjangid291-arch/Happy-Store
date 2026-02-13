@@ -196,13 +196,41 @@ if(!/^[0-9]+$/.test(room))return alert("Room must be number");
 if(hostel==="Girls Hostel")return alert("Not available for girls hostel");
 if(pay!=="Cash"&&!/^[0-9]{4,12}$/.test(utr))return alert("Invalid UPI ref");
 
-let cancelCode="CANCEL "+orderCounter;
-let total=0,msg=`🧾 ORDER%0A🆔 ${orderCounter}%0A❌ ${cancelCode}%0A👤 ${name}%0A🏠 ${room}%0A🏢 ${hostel}%0A📦 ${mode}%0A%0A`;
+let cancelCode = "CANCEL " + orderCounter;
+let total = 0;
 
-cart.forEach(i=>{let s=i.price*i.qty;total+=s;msg+=`• ${i.name} x${i.qty}=₹${s}%0A`;stockData[i.name]-=i.qty});
-let d=getDeliveryCharge(mode); total+=d;
-if(mode==="pickup")msg+=`📍 Collect From Room: 605%0A`;
-msg+=`🚚 ₹${d}%0A💰 ₹${total}%0A`;
+let msg = `🧾 HOSTEL STORE ORDER
+
+🆔 Order No: ${orderCounter}
+❌ Cancel Code: ${cancelCode}
+
+👤 Name: ${name}
+🏠 Room No: ${room}
+🏢 Hostel: ${hostel}
+📦 Mode: ${mode}
+
+📋 ITEMS
+`;
+
+cart.forEach(i=>{
+let s=i.price*i.qty;
+total+=s;
+msg+=`• ${i.name} × ${i.qty} = ₹${s}\n`;
+stockData[i.name]-=i.qty;
+});
+
+let d=getDeliveryCharge(mode);
+total+=d;
+
+if(mode==="pickup")
+msg+=`\n📍 Collect From Room: 605`;
+
+msg+=`
+
+🚚 Delivery: ₹${d}
+💰 Total Payable: ₹${total}
+⏱ Time: 10-15 min`;
+
 
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
@@ -238,6 +266,7 @@ lowStockBox.innerText=w.length?"Low Stock: "+w.join(", "):"Low Stock: None";
 
 </body>
 </html>
+
 
 
 
