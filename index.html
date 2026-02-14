@@ -308,15 +308,23 @@ localStorage.setItem("orderNo",++orderCounter);
 cart=[];showCart();updateStockDisplay();
 }
 
-function showAdmin(){if(prompt("Admin password?")!==localStorage.getItem("adminPass")){
-alert("Wrong password");
-return;
-}
-                     if(!localStorage.getItem("adminPass")){
+function showAdmin(){
+
+/* pehle default password set hoga */
+if(!localStorage.getItem("adminPass")){
 localStorage.setItem("adminPass","291");
 }
 
-                     {adminPanel.style.display="block"}}
+/* phir check hoga */
+let entered = prompt("Admin password?");
+if(entered !== localStorage.getItem("adminPass")){
+alert("Wrong password");
+return;
+}
+
+adminPanel.style.display="block";
+}
+
 function saveStock(){stockData={Maggi:+sMaggi.value,Kurkure:+sKurkure.value,Bhujia:+sBhujia.value,Ariel:+sAriel.value};localStorage.setItem("storeStock",JSON.stringify(stockData));updateStockDisplay();}
 function resetStock(){localStorage.removeItem("storeStock");location.reload();}
 function toggleStore(){let c=localStorage.getItem("storeClosed")==="true";localStorage.setItem("storeClosed",!c);updateStoreStatus();}
@@ -358,6 +366,7 @@ alert("This Month Total ₹"+total);
 
 </body>
 </html>
+
 
 
 
