@@ -227,19 +227,8 @@ billBox.style.left="-9999px";
 }
 
 function placeOrder(){
-  for(let item of cart){
-if(item.qty>stockData[item.name]){
-alert("Invalid order detected");
-cart=[];
-return;
-}
-}
-  if(pay!=="Cash" && utr.length<4){
-alert("Payment reference required");
-return;
-}
 
-  /* STORE CLOSED BLOCK */
+/* STORE CLOSED BLOCK */
 if(localStorage.getItem("storeClosed")==="true"){
 alert("Store is currently closed");
 return;
@@ -254,6 +243,7 @@ let pay=document.getElementById("payment").value;
 let utr=document.getElementById("utr").value.trim();
 let mode=document.getElementById("mode").value;
 
+/* validation */
 if(!/^[A-Za-z ]+$/.test(name))return alert("Invalid name");
 if(!/^[0-9]+$/.test(room))return alert("Room must be number");
 if(hostel==="Girls Hostel")return alert("Not available for girls hostel");
@@ -279,17 +269,6 @@ let s=i.price*i.qty;
 total+=s;
 msg+=`${i.name} x${i.qty} = ₹${s}\n`;
 stockData[i.name]-=i.qty;
-  /* SAVE SALES DATA */
-let today=new Date().toLocaleDateString();
-let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
-
-if(!sales[today]) sales[today]={items:{},total:0};
-
-sales[today].items[i.name]=(sales[today].items[i.name]||0)+i.qty;
-sales[today].total+=s;
-
-localStorage.setItem("salesData",JSON.stringify(sales));
-
 });
 
 let d=getDeliveryCharge(mode);
@@ -300,13 +279,16 @@ if(mode==="pickup")msg+=`\nCollect From Room: 605`;
 msg+=`\nDelivery: ₹${d}\nTotal Payable: ₹${total}\nTime: 10-15 min`;
 
 generateBillImage(msg);
-window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`);
+
+/* WHATSAPP FIX */
+window.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
 
 cart=[];showCart();updateStockDisplay();
 }
+
 
 function showAdmin(){
 
@@ -366,6 +348,7 @@ alert("This Month Total ₹"+total);
 
 </body>
 </html>
+
 
 
 
