@@ -120,6 +120,13 @@ Ariel Buy ₹ <input id="bAriel" type="number"><br>
 </div>
 
 <script>
+  const realPrice={
+Maggi:20,
+Kurkure:20,
+Bhujia:300,
+Ariel:160
+};
+
 var phone="919983729301";
 var cart=[];
 var orderCounter=parseInt(localStorage.getItem("orderNo")||1001);
@@ -156,7 +163,7 @@ cart.forEach(i=>{if(i.name===name)already+=i.qty});
 let available=stockData[name]-already;
 if(q>available)return alert("Only "+available+" left");
 let found=cart.find(i=>i.name===name);
-if(found)found.qty+=q; else cart.push({name,price,qty:q});
+if(found)found.qty+=q; else cart.push({name,price:realPrice[name],qty:q});
 showCart();
 }
 
@@ -220,6 +227,18 @@ billBox.style.left="-9999px";
 }
 
 function placeOrder(){
+  for(let item of cart){
+if(item.qty>stockData[item.name]){
+alert("Invalid order detected");
+cart=[];
+return;
+}
+}
+  if(pay!=="Cash" && utr.length<4){
+alert("Payment reference required");
+return;
+}
+
   /* STORE CLOSED BLOCK */
 if(localStorage.getItem("storeClosed")==="true"){
 alert("Store is currently closed");
@@ -289,7 +308,15 @@ localStorage.setItem("orderNo",++orderCounter);
 cart=[];showCart();updateStockDisplay();
 }
 
-function showAdmin(){if(prompt("Password")==="@monty291"){adminPanel.style.display="block"}}
+function showAdmin(){if(prompt("Admin password?")!==localStorage.getItem("adminPass")){
+alert("Wrong password");
+return;
+}
+                     if(!localStorage.getItem("adminPass")){
+localStorage.setItem("adminPass","291");
+}
+
+                     {adminPanel.style.display="block"}}
 function saveStock(){stockData={Maggi:+sMaggi.value,Kurkure:+sKurkure.value,Bhujia:+sBhujia.value,Ariel:+sAriel.value};localStorage.setItem("storeStock",JSON.stringify(stockData));updateStockDisplay();}
 function resetStock(){localStorage.removeItem("storeStock");location.reload();}
 function toggleStore(){let c=localStorage.getItem("storeClosed")==="true";localStorage.setItem("storeClosed",!c);updateStoreStatus();}
@@ -331,6 +358,7 @@ alert("This Month Total ₹"+total);
 
 </body>
 </html>
+
 
 
 
