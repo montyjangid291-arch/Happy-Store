@@ -269,7 +269,24 @@ let s=i.price*i.qty;
 total+=s;
 msg+=`${i.name} x${i.qty} = ₹${s}\n`;
 stockData[i.name]-=i.qty;
+
+/* SAVE SALES DATA */
+let today=new Date().toISOString().slice(0,10);
+let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+
+if(!sales[today]) sales[today]={items:{},total:0};
+
+sales[today].items[i.name]=(sales[today].items[i.name]||0)+i.qty;
+sales[today].total+=s;
+
+localStorage.setItem("salesData",JSON.stringify(sales));
 });
+  let buy=JSON.parse(localStorage.getItem("buyPrice")||"{}");
+let profit=(i.price-(buy[i.name]||0))*i.qty;
+
+if(!sales[today].profit) sales[today].profit=0;
+sales[today].profit+=profit;
+
 
 let d=getDeliveryCharge(mode);
 total+=d;
@@ -313,23 +330,25 @@ function toggleStore(){let c=localStorage.getItem("storeClosed")==="true";localS
 function showReport(){
 
 let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
-let text="📊 TODAY REPORT\n\n";
-
-let today=new Date().toLocaleDateString();
+let today=new Date().toISOString().slice(0,10);
 
 if(!sales[today]){
 alert("No sales today");
 return;
 }
 
+let text="📊 TODAY REPORT\n\n";
+
 for(let item in sales[today].items){
 text+=item+" x "+sales[today].items[item]+"\n";
 }
 
-text+="\nTotal ₹"+sales[today].total;
+text+="\nRevenue ₹"+sales[today].total;
+text+="\nProfit ₹"+(sales[today].profit||0);
 
 alert(text);
 }
+
   function monthlyReport(){
 
 let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
@@ -343,11 +362,22 @@ if(d.getMonth()==month) total+=sales[date].total;
 
 alert("This Month Total ₹"+total);
 }
+function saveBuyPrice(){
+let buy={
+Maggi:+bMaggi.value,
+Kurkure:+bKurkure.value,
+Bhujia:+bBhujia.value,
+Ariel:+bAriel.value
+};
+localStorage.setItem("buyPrice",JSON.stringify(buy));
+alert("Buy price saved");
+}
 
 </script>
 
 </body>
 </html>
+
 
 
 
