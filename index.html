@@ -270,17 +270,22 @@ total+=s;
 msg+=`${i.name} x${i.qty} = ₹${s}\n`;
 stockData[i.name]-=i.qty;
 
-/* SAVE SALES DATA */
+/* SALES + PROFIT SAVE */
 let today=new Date().toISOString().slice(0,10);
 let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+let buy=JSON.parse(localStorage.getItem("buyPrice")||"{}");
 
-if(!sales[today]) sales[today]={items:{},total:0};
+if(!sales[today]) sales[today]={items:{},total:0,profit:0};
 
 sales[today].items[i.name]=(sales[today].items[i.name]||0)+i.qty;
 sales[today].total+=s;
 
+let itemProfit=(i.price-(buy[i.name]||0))*i.qty;
+sales[today].profit+=itemProfit;
+
 localStorage.setItem("salesData",JSON.stringify(sales));
 });
+
   let buy=JSON.parse(localStorage.getItem("buyPrice")||"{}");
 let profit=(i.price-(buy[i.name]||0))*i.qty;
 
@@ -377,6 +382,7 @@ alert("Buy price saved");
 
 </body>
 </html>
+
 
 
 
