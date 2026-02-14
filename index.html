@@ -286,11 +286,6 @@ sales[today].profit+=itemProfit;
 localStorage.setItem("salesData",JSON.stringify(sales));
 });
 
-  let buy=JSON.parse(localStorage.getItem("buyPrice")||"{}");
-let profit=(i.price-(buy[i.name]||0))*i.qty;
-
-if(!sales[today].profit) sales[today].profit=0;
-sales[today].profit+=profit;
 
 
 let d=getDeliveryCharge(mode);
@@ -382,6 +377,7 @@ alert("Buy price saved");
 
 </body>
 </html>
+
 
 
 
