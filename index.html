@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <head>
 <meta charset="UTF-8">
 <title>Monty Mart</title>
@@ -432,9 +434,30 @@ total: total
 })
 });
 
+// ===== RAZORPAY PAYMENT =====
+var options = {
+"key": "PASTE_YOUR_KEY_ID_HERE",
+"amount": total * 100,
+"currency": "INR",
+"name": "Monty Mart",
+"description": "Hostel Store Order",
+"handler": function (response){
+alert("Payment Successful ✅");
 
-/* WHATSAPP FIX */
+// payment hone ke baad WhatsApp khulega
 window.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+},
+"prefill": {
+"name": name
+},
+"theme": {
+"color": "#25D366"
+}
+};
+
+var rzp1 = new Razorpay(options);
+rzp1.open();
+return;
 
 localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
@@ -558,6 +581,7 @@ document.getElementById("liveOrders").innerHTML=html;
 
 </body>
 </html>
+
 
 
 
