@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<head>
+<meta charset="UTF-8">
+<title>Monty Mart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+body{margin:0;font-family:Arial;background:#f2f2f2;}
+header{background:#111;color:white;text-align:center;padding:15px;font-size:22px;}
+.container{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:15px;padding:15px;}
+.card{background:white;padding:10px;border-radius:10px;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+.card img{width:100%;height:140px;object-fit:cover;border-radius:8px;}
+.price{font-weight:bold;margin:6px;}
+.stock{font-size:14px;margin-bottom:5px;}
+.btn{background:#25D366;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:5px;}
+.infoBar{background:#e2f0ff;padding:6px;text-align:center;}
+  .weight{
+font-size:13px;
+color:#555;
+margin-bottom:4px;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>🛒 My Hostel Store</header>
+<!-- STORE CLOSED MESSAGE BAR (NON BLOCKING) -->
+<div id="closedOverlay" style="
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+background:#ff3b3b;
+color:white;
+z-index:999;
+text-align:center;
+padding:10px;
+font-size:18px;
+font-weight:bold;">
+🚫 STORE IS CLOSED — Orders Disabled
+</div>
+
+
+<div id="storeStatus" style="text-align:center;padding:6px;background:#d4edda;color:#155724;">STORE OPEN</div>
+<div id="topItem" class="infoBar">Top Item: -</div>
+
+<h2 style="text-align:center">Customer Details</h2>
+<div style="text-align:center;margin-bottom:20px;">
+<input id="custName" placeholder="Your Name"><br>
+<input id="roomNo" placeholder="Room Number"><br>
+
+<select id="hostel">
+<option>Boys Hostel</option>
+<option>Gate Pickup</option>
+<option>Girls Hostel</option>
+</select><br>
+
+<select id="payment">
+<option>UPI</option>
+<option>Cash</option>
+<option>Paytm</option>
+</select><br>
+
+<input id="utr" placeholder="UPI Ref No"><br>
+
+<select id="mode">
+<option value="delivery">Room Delivery</option>
+<option value="pickup">Self Pickup</option>
+</select><br>
+</div>
+
+<div class="container">
+<div class="card" data-name="Maggi"><img src="maggi.jpg"><h3>Maggi</h3>
+<div class="weight">70g Pack</div>
+<div class="price">₹20</div>
+<div class="stock"></div><input type="number" id="qty1" value="1"><br><button class="btn" onclick="addToCart(this,20,'qty1')">Add</button></div>
+
+<div class="card" data-name="Kurkure"><img src="kurkure.jpg"><h3>Kurkure</h3><div class="weight">75g Pack</div><div class="price">₹20</div><div class="stock"></div><input type="number" id="qty2" value="1"><br><button class="btn" onclick="addToCart(this,20,'qty2')">Add</button></div>
+
+<div class="card" data-name="Bhoot Chips">
+
+<img src="bhoot.png">
+<h3>Bhoot Chips</h3>
+<div class="weight">45g Pack</div>
+<div class="price">₹20</div>
+<div class="stock"></div>
+<input type="number" id="qty5" value="1"><br>
+<button class="btn" onclick="addToCart(this,20,'qty5')">Add</button>
+</div>
+<div class="card" data-name="Bingo Onion Chips">
+
+<img src="bingo1.png">
+<h3>Bingo Onion Chips</h3>
+<div class="weight">45g Pack</div>
+<div class="price">₹20</div>
+<div class="stock"></div>
+<input type="number" id="qty6" value="1"><br>
+<button class="btn" onclick="addToCart(this,20,'qty6')">Add</button>
+</div>
+
+<div class="card" data-name="Bhujia"><img src="bhujia.jpg"><h3>Bhujia</h3><div class="weight">1kg Pack</div><div class="price">₹300</div><div class="stock"></div><input type="number" id="qty3" value="1"><br><button class="btn" onclick="addToCart(this,300,'qty3')">Add</button></div>
+
+<div class="card" data-name="Ariel"><img src="ariel.jpg"><h3>Ariel</h3><div class="weight">1L Pack</div><div class="price">₹160</div><div class="stock"></div><input type="number" id="qty4" value="1"><br><button class="btn" onclick="addToCart(this,160,'qty4')">Add</button></div>
+</div>
+
+<h2 style="text-align:center">🛒 Cart</h2>
+<div id="cart" style="text-align:center"></div>
+
+<div style="text-align:center;margin:20px;">
+<button class="btn" onclick="placeOrder()">Place Order on WhatsApp</button>
+</div>
+
+<div style="text-align:center;margin-top:30px;">
+<button onclick="showAdmin()">Admin</button>
+<div id="adminPanel" style="display:none;border:1px solid #ccc;padding:10px;margin-top:10px;">
+<h3>Admin</h3>
+<div id="earningsBox">Today Earnings: ₹0</div>
+<div id="lowStockBox">Low Stock: None</div>
+<div id="ordersList"></div>
+
+Maggi <input id="sMaggi" type="number"><br>
+Kurkure <input id="sKurkure" type="number"><br>
+Bhujia <input id="sBhujia" type="number"><br>
+Ariel <input id="sAriel" type="number"><br>
+Bhoot Chips <input id="sBhootChips" type="number"><br>
+Bingo Onion Chips <input id="sBingoOnionChips" type="number"><br>
+
+<button onclick="saveStock()">Save Stock</button>
+  <button onclick="showReport()">Today Report</button>
+
+<button onclick="resetStock()">Reset</button>
+<button onclick="toggleStore()">Open/Close</button>
+ 
+
+<hr>
+<button onclick="loadOrders()">Show Live Orders</button>
+<div id="liveOrders" style="margin-top:10px;"></div>
+
+<h3>Purchase Price (Profit)</h3>
+
+Maggi Buy ₹ <input id="bMaggi" type="number"><br>
+Kurkure Buy ₹ <input id="bKurkure" type="number"><br>
+Bhujia Buy ₹ <input id="bBhujia" type="number"><br>
+Ariel Buy ₹ <input id="bAriel" type="number"><br>
+Bhoot Chips ₹ <input id="bBhootChips" type="number"><br>
+Bingo Onion Chips ₹ <input id="bBingoOnionChips" type="number"><br>
+
+
+<button onclick="saveBuyPrice()">Save Buy Price</button>
+
+<div id="profitBox">Today Profit: ₹0</div>
+
+</div>
+</div>
+
+<!-- BILL -->
+<div id="billBox" style="position:fixed;left:-9999px;top:0;opacity:0;background:white;padding:15px;font-family:monospace;width:280px;border:1px solid #000">
+
+<h3 style="text-align:center;margin:0;">HOSTEL STORE</h3>
+<hr>
+<div id="billContent"></div>
+<hr>
+<div style="text-align:center">Thank You</div>
+</div>
+
+<script>
+  const realPrice={
+Maggi:20,
+Kurkure:20,
+Bhujia:300,
+Ariel:160,
+"Bingo Onion Chips":20,
+"Bhoot Chips":20
+};
+
+var phone="919983729301";
+var cart=[];
+var orderCounter=parseInt(localStorage.getItem("orderNo")||1001);
+var stockData=JSON.parse(localStorage.getItem("storeStock"))||{Maggi:24,Kurkure:9,Bhujia:2,Ariel:1,"Bingo Onion Chips":5,"Bhoot Chips":5};
+
+
+function updateStoreStatus(){
+let closed = localStorage.getItem("storeClosed")==="true";
+
+let bar=document.getElementById("storeStatus");
+let overlay=document.getElementById("closedOverlay");
+
+if(closed){
+bar.innerText="STORE CLOSED";
+bar.style.background="#f8d7da";
+bar.style.color="#721c24";
+overlay.style.display="block";
+}else{
+bar.innerText="STORE OPEN";
+bar.style.background="#d4edda";
+bar.style.color="#155724";
+overlay.style.display="none";
+}
+}
+
+
+updateStoreStatus();
+function updateStockDisplay(){
+document.querySelectorAll(".card").forEach(card=>{
+let name=card.dataset.name;
+let stock=stockData[name]||0;
+let btn=card.querySelector("button");
+card.querySelector(".stock").innerText=stock>0?"In Stock: "+stock:"Out of Stock";
+if(stock<=0){
+    btn.innerText="Out of Stock";
+    btn.style.background="#999";
+    btn.dataset.out="true";
+}else{
+    btn.innerText="Add";
+    btn.style.background="#25D366";
+    btn.dataset.out="false";
+}
+
+});
+}
+updateStockDisplay();
+
+function addToCart(btn,price,id){
+
+/* STORE CLOSED CHECK */
+if(localStorage.getItem("storeClosed")==="true"){
+alert("Store is closed right now");
+return;
+}
+
+let card = btn.closest(".card");
+let name = card.dataset.name;
+
+/* PRODUCT DOES NOT EXIST */
+if(!stockData[name]){
+alert("Product unavailable");
+return;
+}
+
+let q=parseInt(document.getElementById(id).value);
+if(q<=0||isNaN(q))return alert("Enter valid quantity");
+
+/* already in cart */
+let already=0;
+cart.forEach(i=>{if(i.name===name)already+=i.qty});
+
+/* remaining stock */
+let available=stockData[name]-already;
+
+/* OUT OF STOCK */
+if(available<=0){
+alert("❌ Product is out of stock");
+return;
+}
+
+/* MORE THAN AVAILABLE */
+if(q>available){
+alert("Only "+available+" left");
+return;
+}
+
+let found=cart.find(i=>i.name===name);
+if(found)found.qty+=q; 
+else cart.push({name,price:realPrice[name],qty:q});
+
+showCart();
+}
+
+
+function showCart(){
+let html="",t=0;
+cart.forEach((i,x)=>{let s=i.price*i.qty;t+=s;html+=`${i.name} x${i.qty}=₹${s} <button onclick="removeItem(${x})">❌</button><br>`});
+html+="<b>Total ₹"+t+"</b>";
+document.getElementById("cart").innerHTML=html;
+}
+function removeItem(i){cart.splice(i,1);showCart();}
+
+function getDeliveryCharge(mode){
+if(mode==="pickup")return 0;
+let h=new Date().getHours();
+return (h>=8&&h<19)?10:20;
+}
+
+async function generateBillImage(text){
+
+/* 1 — text set karo */
+let clean=text
+.replace(/\n/g,"<br>")
+.replace(/🧾/g,"")
+.replace(/🆔/g,"Order No:")
+.replace(/👤/g,"Name:")
+.replace(/🏠/g,"Room:")
+.replace(/🏢/g,"Hostel:")
+.replace(/📦/g,"Mode:")
+.replace(/🚚/g,"Delivery:")
+.replace(/💰/g,"Total:");
+
+document.getElementById("billContent").innerHTML=clean;
+
+
+/* 2 — element visible banao */
+let billBox=document.getElementById("billBox");
+billBox.style.position="fixed";
+billBox.style.top="50%";
+billBox.style.left="50%";
+billBox.style.transform="translate(-50%,-50%)";
+billBox.style.opacity="1";
+
+/* 3 — render hone ka wait */
+await new Promise(r=>setTimeout(r,400));
+
+/* 4 — screenshot */
+let canvas=await html2canvas(billBox,{
+backgroundColor:"#ffffff",
+scale:2
+});
+
+/* 5 — download */
+let link=document.createElement("a");
+link.download="bill.png";
+link.href=canvas.toDataURL("image/png");
+link.click();
+
+/* 6 — hide again */
+billBox.style.opacity="0";
+billBox.style.left="-9999px";
+}
+
+function placeOrder(){
+
+/* STORE CLOSED BLOCK */
+if(localStorage.getItem("storeClosed")==="true"){
+alert("Store is currently closed");
+return;
+}
+
+if(cart.length==0)return alert("Cart empty");
+
+let name=custName.value.trim();
+let room=roomNo.value.trim();
+let hostel=document.getElementById("hostel").value;
+let pay=document.getElementById("payment").value;
+let utr=document.getElementById("utr").value.trim();
+let mode=document.getElementById("mode").value;
+
+/* validation */
+if(!/^[A-Za-z ]+$/.test(name))return alert("Invalid name");
+if(!/^[0-9]+$/.test(room))return alert("Room must be number");
+if(hostel==="Girls Hostel")return alert("Not available for girls hostel");
+if(pay!=="Cash"&&!/^[0-9]{4,12}$/.test(utr))return alert("Invalid UPI ref");
+
+let cancelCode="CANCEL "+orderCounter;
+let total=0;
+
+let msg=`HOSTEL STORE ORDER
+Order No: ${orderCounter}
+Cancel Code: ${cancelCode}
+
+Name: ${name}
+Room No: ${room}
+Hostel: ${hostel}
+Mode: ${mode}
+
+ITEMS
+`;
+
+cart.forEach(i=>{
+let s=i.price*i.qty;
+total+=s;
+msg+=`${i.name} x${i.qty} = ₹${s}\n`;
+stockData[i.name]-=i.qty;
+
+/* SALES + PROFIT SAVE */
+let today=new Date().toISOString().slice(0,10);
+let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+let buy=JSON.parse(localStorage.getItem("buyPrice")||"{}");
+
+if(!sales[today]) sales[today]={items:{},total:0,profit:0};
+
+sales[today].items[i.name]=(sales[today].items[i.name]||0)+i.qty;
+sales[today].total+=s;
+
+let itemProfit=(i.price-(buy[i.name]||0))*i.qty;
+sales[today].profit+=itemProfit;
+
+localStorage.setItem("salesData",JSON.stringify(sales));
+});
+/* DELIVERY CHARGE CALCULATE — IMPORTANT */
+const d = getDeliveryCharge(mode);
+total += d;
+
+
+/* DELIVERY TYPE SHOW */
+if(mode==="pickup"){
+msg+=`\nDelivery Type: Self Pickup`;
+msg+=`\nCollect From Room: 605`;
+msg+=`\nDelivery Charges: ₹0`;
+}
+else{
+msg+=`\nDelivery Type: Room Delivery`;
+msg+=`\nDelivery Charges: ₹${d}`;
+}
+
+msg+=`\nTotal Payable: ₹${total}`;
+msg+=`\nEstimated Time: 10-15 min`;
+
+
+generateBillImage(msg);
+
+/* SEND ORDER TO SERVER */
+
+fetch("https://monty-mart.onrender.com/order", {
+
+method: "POST",
+headers: {
+"Content-Type": "application/json"
+},
+body: JSON.stringify({
+name: name,
+room: room,
+hostel: hostel,
+mode: mode,
+deliveryCharge: d,
+items: cart,
+total: total
+})
+});
+
+// payment hone ke baad WhatsApp khulega
+window.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+
+
+localStorage.setItem("storeStock",JSON.stringify(stockData));
+localStorage.setItem("orderNo",++orderCounter);
+
+cart=[];showCart();updateStockDisplay();
+}
+
+
+function showAdmin(){
+
+/* pehle default password set hoga */
+if(!localStorage.getItem("adminPass")){
+localStorage.setItem("adminPass","291");
+}
+
+/* phir check hoga */
+let entered = prompt("Admin password?");
+if(entered !== localStorage.getItem("adminPass")){
+alert("Wrong password");
+return;
+}
+
+adminPanel.style.display="block";
+}
+
+function saveStock(){
+
+stockData={
+Maggi:+sMaggi.value,
+Kurkure:+sKurkure.value,
+Bhujia:+sBhujia.value,
+Ariel:+sAriel.value,
+"Bhoot Chips":+sBhootChips.value,
+"Bingo Onion Chips":+sBingoOnionChips.value
+};
+
+localStorage.setItem("storeStock",JSON.stringify(stockData));
+updateStockDisplay();
+
+alert("Stock Saved");
+
+}
+function resetStock(){localStorage.removeItem("storeStock");location.reload();}
+function toggleStore(){
+let closed=localStorage.getItem("storeClosed")==="true";
+localStorage.setItem("storeClosed",(!closed).toString());
+updateStoreStatus();
+}
+function showReport(){
+
+let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+let today=new Date().toISOString().slice(0,10);
+
+if(!sales[today]){
+alert("No sales today");
+return;
+}
+
+let text="📊 TODAY REPORT\n\n";
+
+for(let item in sales[today].items){
+text+=item+" x "+sales[today].items[item]+"\n";
+}
+
+text+="\nRevenue ₹"+sales[today].total;
+text+="\nProfit ₹"+(sales[today].profit||0);
+
+alert(text);
+}
+
+  function monthlyReport(){
+
+let sales=JSON.parse(localStorage.getItem("salesData")||"{}");
+let month=new Date().getMonth();
+let total=0;
+
+for(let date in sales){
+let d=new Date(date);
+if(d.getMonth()==month) total+=sales[date].total;
+}
+
+alert("This Month Total ₹"+total);
+}
+function saveBuyPrice(){
+let buy={
+Maggi:+bMaggi.value,
+Kurkure:+bKurkure.value,
+Bhujia:+bBhujia.value,
+Ariel:+bAriel.value,
+"Bhoot Chips":+bBhootChips.value,
+"Bingo Onion Chips":+bBingoOnionChips.value
+};
+localStorage.setItem("buyPrice",JSON.stringify(buy));
+alert("Buy price saved");
+}
+
+
+async function loadOrders(){
+const res = await fetch("https://monty-mart.onrender.com/orders");
+
+const orders = await res.json();
+
+let html="<h3>Live Orders</h3>";
+
+orders.forEach(o=>{
+html+=`
+<div style="border:1px solid #aaa;padding:8px;margin:5px;">
+<b>${o.name}</b> (Room ${o.room})<br>
+Items:<br>
+${o.items.map(i=>i.name+" x"+i.qty).join("<br>")}<br>
+Total ₹${o.total}<br>
+<small>${o.time}</small>
+</div>
+`;
+});
+
+document.getElementById("liveOrders").innerHTML=html;
+}
+
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
