@@ -11,7 +11,6 @@ Ariel:1,
 "Bingo Onion Chips":5
 };
 
-const cors = require("cors");
 const path = require("path");
 
 const app = express();
