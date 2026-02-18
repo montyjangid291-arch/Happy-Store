@@ -1,5 +1,6 @@
 const express = require("express");
-const app = express();
+const cors = require("cors");
+
 // ===== GLOBAL STORE STOCK (ONLINE SAME FOR EVERY DEVICE) =====
 let storeStock = {
 Maggi:24,
@@ -81,4 +82,6 @@ app.get("/orders", (req, res) => {
     res.json(orders);
 });
 
-app.listen(5000, () => console.log("Server running → http://localhost:5000"));
+app.listen(process.env.PORT || 5000, () => {console.log("Server running");
+
+});
