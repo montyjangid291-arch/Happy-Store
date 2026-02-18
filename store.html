@@ -134,7 +134,6 @@ Bingo Onion Chips <input id="sBingoOnionChips" type="number"><br>
 <button onclick="saveStock()">Save Stock</button>
   <button onclick="showReport()">Today Report</button>
 
-<button onclick="resetStock()">Reset</button>
 <button onclick="toggleStore()">Open/Close</button>
  
 
@@ -182,7 +181,20 @@ Ariel:160,
 var phone="919983729301";
 var cart=[];
 var orderCounter=parseInt(localStorage.getItem("orderNo")||1001);
-var stockData=JSON.parse(localStorage.getItem("storeStock"))||{Maggi:24,Kurkure:9,Bhujia:2,Ariel:1,"Bingo Onion Chips":5,"Bhoot Chips":5};
+var stockData={};
+// LOAD STOCK FROM SERVER
+async function loadStock(){
+    try{
+        const res = await fetch("https://monty-mart.onrender.com/stock");
+        const data = await res.json();
+        stockData = data;
+        updateStockDisplay();
+    }catch(e){
+        console.log("Stock load error", e);
+    }
+}
+
+loadStock();
 
 
 function updateStoreStatus(){
@@ -224,7 +236,7 @@ if(stock<=0){
 
 });
 }
-updateStockDisplay();
+
 
 function addToCart(btn,price,id){
 
@@ -437,7 +449,6 @@ total: total
 /* WHATSAPP FIX */
 window.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
-localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
 
 cart=[];showCart();updateStockDisplay();
@@ -472,13 +483,17 @@ Ariel:+sAriel.value,
 "Bingo Onion Chips":+sBingoOnionChips.value
 };
 
-localStorage.setItem("storeStock",JSON.stringify(stockData));
 updateStockDisplay();
+fetch("https://monty-mart.onrender.com/stock",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(stockData)
+});
 
 alert("Stock Saved");
 
 }
-function resetStock(){localStorage.removeItem("storeStock");location.reload();}
+
 function toggleStore(){
 let closed=localStorage.getItem("storeClosed")==="true";
 localStorage.setItem("storeClosed",(!closed).toString());
@@ -555,6 +570,27 @@ Total ₹${o.total}<br>
 
 document.getElementById("liveOrders").innerHTML=html;
 }
+/* LOAD STOCK FROM SERVER — VERY IMPORTANT */
+async function loadStockFromServer(){
+
+try{
+
+const res = await fetch("https://monty-mart.onrender.com/stock");
+const data = await res.json();
+
+stockData = data;
+updateStockDisplay();
+
+}
+catch(err){
+console.log("Server stock load failed");
+}
+
+}
+
+/* page open hote hi stock load hoga */
+loadStockFromServer();
+
 
 </script>
 
