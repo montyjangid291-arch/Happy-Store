@@ -47,6 +47,8 @@ function saveData() {
 
 let { storeStock, orders } = loadData();
 
+let storeClosed = false;
+
 app.get("/stock", (req, res) => {
   res.json(storeStock);
 });
@@ -108,6 +110,18 @@ app.post("/order", (req, res) => {
 app.get("/orders", (req, res) => {
   res.json(orders);
 });
+// =====store open/close status ===== 
+// get status 
+app.get("/store-status",(req,res)=>{res.json({closed:storeClosed});
+});
+
+// change status (admin)
+app.post("/store-status",(req,res)=>{storeClosed=req.body.closed;
+    console.log("STORE STATUS:",storeClosed ?
+        "CLOSED":"open");
+        res.json({status:"ok"});
+    });
+    
 
 app.listen(process.env.PORT || 5000, () => {
   console.log("Server running");
