@@ -17,6 +17,7 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 .stock{font-size:14px;margin-bottom:5px;}
 .btn{background:#25D366;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:5px;}
 .infoBar{background:#e2f0ff;padding:6px;text-align:center;}
+.deliveryNote{font-size:13px;color:#333;margin-top:6px;}
   .weight{
 font-size:13px;
 color:#555;
@@ -73,6 +74,7 @@ font-weight:bold;">
 <option value="delivery">Room Delivery</option>
 <option value="pickup">Self Pickup</option>
 </select><br>
+<div id="deliveryNote" class="deliveryNote">Delivery Charges: ₹10 (Room Delivery)</div>
 </div>
 
 <div class="container">
@@ -181,20 +183,8 @@ Ariel:160,
 var phone="919983729301";
 var cart=[];
 var orderCounter=parseInt(localStorage.getItem("orderNo")||1001);
+var API_BASE="https://monty-mart.onrender.com";
 var stockData={};
-// LOAD STOCK FROM SERVER
-async function loadStock(){
-    try{
-        const res = await fetch("https://monty-mart.onrender.com/stock");
-        const data = await res.json();
-        stockData = data;
-        updateStockDisplay();
-    }catch(e){
-        console.log("Stock load error", e);
-    }
-}
-
-loadStock();
 
 
 function updateStoreStatus(){
@@ -218,6 +208,10 @@ overlay.style.display="none";
 
 
 updateStoreStatus();
+renderDeliveryNote();
+document.getElementById("mode").addEventListener("change",renderDeliveryNote);
+loadStockFromServer();
+setInterval(loadStockFromServer,15000);
 function updateStockDisplay(){
 document.querySelectorAll(".card").forEach(card=>{
 let name=card.dataset.name;
@@ -297,6 +291,16 @@ function getDeliveryCharge(mode){
 if(mode==="pickup")return 0;
 let h=new Date().getHours();
 return (h>=8&&h<19)?10:20;
+}
+
+function renderDeliveryNote(){
+let mode=document.getElementById("mode").value;
+let d=getDeliveryCharge(mode);
+if(mode==="pickup"){
+document.getElementById("deliveryNote").innerText="Delivery Charges: ₹0 (Self Pickup)";
+}else{
+document.getElementById("deliveryNote").innerText=`Delivery Charges: ₹${d} (Room Delivery)`;
+}
 }
 
 async function generateBillImage(text){
@@ -428,7 +432,7 @@ generateBillImage(msg);
 /* SEND ORDER TO SERVER */
 
 
-fetch("https://monty-mart.onrender.com/order", {
+fetch(`${API_BASE}/order`, {
 
 method: "POST",
 headers: {
@@ -484,7 +488,7 @@ Ariel:+sAriel.value,
 };
 
 updateStockDisplay();
-fetch("https://monty-mart.onrender.com/stock",{
+fetch(`${API_BASE}/stock`,{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify(stockData)
@@ -550,7 +554,7 @@ alert("Buy price saved");
 
 async function loadOrders(){
 
-const res = await fetch("https://monty-mart.onrender.com/orders");
+const res = await fetch(`${API_BASE}/orders`);
 
 const orders = await res.json();
 
@@ -575,7 +579,7 @@ async function loadStockFromServer(){
 
 try{
 
-const res = await fetch("https://monty-mart.onrender.com/stock");
+const res = await fetch(`${API_BASE}/stock`);
 const data = await res.json();
 
 stockData = data;
@@ -596,4 +600,3 @@ loadStockFromServer();
 
 </body>
 </html>
-
