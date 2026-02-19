@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-
 <head>
 <meta charset="UTF-8">
 <title>Monty Mart</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -19,6 +21,7 @@ header{background:#111;color:white;text-align:center;padding:15px;font-size:22px
 .stock{font-size:14px;margin-bottom:5px;}
 .btn{background:#25D366;color:white;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;margin-top:5px;}
 .infoBar{background:#e2f0ff;padding:6px;text-align:center;}
+.deliveryNote{font-size:13px;color:#333;margin-top:6px;}
   .weight{
 font-size:13px;
 color:#555;
@@ -75,6 +78,7 @@ font-weight:bold;">
 <option value="delivery">Room Delivery</option>
 <option value="pickup">Self Pickup</option>
 </select><br>
+<div id="deliveryNote" class="deliveryNote">Delivery Charges: ₹10 (Room Delivery)</div>
 </div>
 
 <div class="container">
@@ -136,7 +140,6 @@ Bingo Onion Chips <input id="sBingoOnionChips" type="number"><br>
 <button onclick="saveStock()">Save Stock</button>
   <button onclick="showReport()">Today Report</button>
 
-<button onclick="resetStock()">Reset</button>
 <button onclick="toggleStore()">Open/Close</button>
  
 
@@ -184,7 +187,8 @@ Ariel:160,
 var phone="919983729301";
 var cart=[];
 var orderCounter=parseInt(localStorage.getItem("orderNo")||1001);
-var stockData=JSON.parse(localStorage.getItem("storeStock"))||{Maggi:24,Kurkure:9,Bhujia:2,Ariel:1,"Bingo Onion Chips":5,"Bhoot Chips":5};
+var API_BASE="https://monty-mart.onrender.com";
+var stockData={};
 
 
 function updateStoreStatus(){
@@ -208,6 +212,10 @@ overlay.style.display="none";
 
 
 updateStoreStatus();
+renderDeliveryNote();
+document.getElementById("mode").addEventListener("change",renderDeliveryNote);
+loadStockFromServer();
+setInterval(loadStockFromServer,15000);
 function updateStockDisplay(){
 document.querySelectorAll(".card").forEach(card=>{
 let name=card.dataset.name;
@@ -226,7 +234,7 @@ if(stock<=0){
 
 });
 }
-updateStockDisplay();
+
 
 function addToCart(btn,price,id){
 
@@ -287,6 +295,16 @@ function getDeliveryCharge(mode){
 if(mode==="pickup")return 0;
 let h=new Date().getHours();
 return (h>=8&&h<19)?10:20;
+}
+
+function renderDeliveryNote(){
+let mode=document.getElementById("mode").value;
+let d=getDeliveryCharge(mode);
+if(mode==="pickup"){
+document.getElementById("deliveryNote").innerText="Delivery Charges: ₹0 (Self Pickup)";
+}else{
+document.getElementById("deliveryNote").innerText=`Delivery Charges: ₹${d} (Room Delivery)`;
+}
 }
 
 async function generateBillImage(text){
@@ -417,7 +435,8 @@ generateBillImage(msg);
 
 /* SEND ORDER TO SERVER */
 
-fetch("https://monty-mart.onrender.com/order", {
+
+fetch(`${API_BASE}/order`, {
 
 method: "POST",
 headers: {
@@ -434,11 +453,10 @@ total: total
 })
 });
 
-// payment hone ke baad WhatsApp khulega
+
+/* WHATSAPP FIX */
 window.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
-
-localStorage.setItem("storeStock",JSON.stringify(stockData));
 localStorage.setItem("orderNo",++orderCounter);
 
 cart=[];showCart();updateStockDisplay();
@@ -473,13 +491,17 @@ Ariel:+sAriel.value,
 "Bingo Onion Chips":+sBingoOnionChips.value
 };
 
-localStorage.setItem("storeStock",JSON.stringify(stockData));
 updateStockDisplay();
+fetch(`${API_BASE}/stock`,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(stockData)
+});
 
 alert("Stock Saved");
 
 }
-function resetStock(){localStorage.removeItem("storeStock");location.reload();}
+
 function toggleStore(){
 let closed=localStorage.getItem("storeClosed")==="true";
 localStorage.setItem("storeClosed",(!closed).toString());
@@ -535,7 +557,8 @@ alert("Buy price saved");
 
 
 async function loadOrders(){
-const res = await fetch("https://monty-mart.onrender.com/orders");
+
+const res = await fetch(`${API_BASE}/orders`);
 
 const orders = await res.json();
 
@@ -555,11 +578,34 @@ Total ₹${o.total}<br>
 
 document.getElementById("liveOrders").innerHTML=html;
 }
+/* LOAD STOCK FROM SERVER — VERY IMPORTANT */
+async function loadStockFromServer(){
+try{
+
+const res = await fetch("https://monty-mart.onrender.com/stock?nocache=" + Date.now());
+
+
+const data = await res.json();
+
+/* server se jo aaya wo global stockData me daalo */
+stockData = data;
+
+/* UI update */
+updateStockDisplay();
+
+console.log("Stock loaded from server:",stockData);
+
+}catch(err){
+console.log("Server offline — using empty stock");
+}
+}
+
 
 </script>
 
 </body>
 </html>
+
 
 
 
