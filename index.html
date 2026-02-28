@@ -392,9 +392,6 @@ input:focus, select:focus {
     <h3>Admin</h3>
     <button onclick="enableOrderSound()">Enable Order Alert Sound</button>
     <div style="margin-top:8px;">This Device ID: <b id="deviceIdBox">-</b></div>
-    <div id="earningsBox">Today Earnings: Rs 0</div>
-    <div id="monthEarningsBox">This Month Earning: Rs 0</div>
-    <div id="lowStockBox">Low Stock: None</div>
     <div id="ordersList"></div>
 
     <h4 style="margin:10px 0 6px 0;">Stock Entry</h4>
@@ -1621,10 +1618,14 @@ async function refreshTodayReport(showPopup) {
     if (!res.ok) throw new Error("today report fetch failed");
     const data = await safeJson(res);
 
-    getById("earningsBox").innerText = `Today Earnings: Rs ${data.revenue || 0}`;
-    getById("monthEarningsBox").innerText = `This Month Earning: Rs ${data.monthRevenue || 0}`;
-    getById("profitBox").innerText = `Today Profit: Rs ${data.profit || 0}`;
-    getById("monthProfitBox").innerText = `This Month Profit: Rs ${data.monthProfit || 0}`;
+    const earningsBox = getById("earningsBox");
+    const monthEarningsBox = getById("monthEarningsBox");
+    const profitBox = getById("profitBox");
+    const monthProfitBox = getById("monthProfitBox");
+    if (earningsBox) earningsBox.innerText = `Today Earnings: Rs ${data.revenue || 0}`;
+    if (monthEarningsBox) monthEarningsBox.innerText = `This Month Earning: Rs ${data.monthRevenue || 0}`;
+    if (profitBox) profitBox.innerText = `Today Profit: Rs ${data.profit || 0}`;
+    if (monthProfitBox) monthProfitBox.innerText = `This Month Profit: Rs ${data.monthProfit || 0}`;
 
     if (!showPopup) return;
 
