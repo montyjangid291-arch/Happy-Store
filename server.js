@@ -1,45 +1,40 @@
 const mongoose = require("mongoose");
-console.log("ENV CHECK:", process.env.MONGO_URI);
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log(err));
-  const express = require("express");
+const express = require("express");
 const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-const DATA_FILE = path.join(__dirname, "store-data.json");
-
 const defaultStock = {
   Maggi: 24,
   Kurkure: 9,
   Bhujia: 2,
-  Ariel: 1,
+  Namkeen: 2,
   "Bhoot Chips": 5,
-  "Bingo Onion Chips": 5,
+  "Onion Chips": 5,
+  "Unibic Chocolate Chip Cookies": 5,
 };
 
 const defaultBuyPrice = {
   Maggi: 0,
   Kurkure: 0,
   Bhujia: 0,
-  Ariel: 0,
+  Namkeen: 0,
   "Bhoot Chips": 0,
-  "Bingo Onion Chips": 0,
+  "Onion Chips": 0,
+  "Unibic Chocolate Chip Cookies": 0,
 };
 
 const defaultSellPrice = {
   Maggi: 20,
   Kurkure: 20,
   Bhujia: 300,
-  Ariel: 160,
+  Namkeen: 50,
   "Bhoot Chips": 20,
-  "Bingo Onion Chips": 20,
+  "Onion Chips": 30,
+  "Unibic Chocolate Chip Cookies": 30,
 };
 
 function getDefaultProductMap(fillValue) {
@@ -47,9 +42,10 @@ function getDefaultProductMap(fillValue) {
     Maggi: fillValue,
     Kurkure: fillValue,
     Bhujia: fillValue,
-    Ariel: fillValue,
+    Namkeen: fillValue,
     "Bhoot Chips": fillValue,
-    "Bingo Onion Chips": fillValue,
+    "Onion Chips": fillValue,
+    "Unibic Chocolate Chip Cookies": fillValue,
   };
 }
 
@@ -76,50 +72,105 @@ function normalizeDistributorStock(raw) {
   return result;
 }
 
-function loadData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    return {
-      storeStock: defaultStock,
-      orders: [],
-      buyPrice: defaultBuyPrice,
-      sellPrice: defaultSellPrice,
-      distributorStock: defaultDistributorStock,
-    };
-  }
+const StoreStateSchema = new mongoose.Schema(
+  {
+    singletonKey: { type: String, required: true, unique: true, default: "main" },
+    storeStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultStock }) },
+    orders: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    buyPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultBuyPrice }) },
+    sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
+    distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
+    storeClosed: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
 
-  try {
-    const raw = fs.readFileSync(DATA_FILE, "utf8");
-    const parsed = JSON.parse(raw);
-    return {
-      storeStock: parsed.storeStock || defaultStock,
-      orders: Array.isArray(parsed.orders) ? parsed.orders : [],
-      buyPrice: parsed.buyPrice || defaultBuyPrice,
-      sellPrice: parsed.sellPrice || defaultSellPrice,
-      distributorStock: normalizeDistributorStock(parsed.distributorStock),
-    };
-  } catch (error) {
-    console.error("Failed to parse store-data.json, using defaults", error);
-    return {
-      storeStock: defaultStock,
-      orders: [],
-      buyPrice: defaultBuyPrice,
-      sellPrice: defaultSellPrice,
-      distributorStock: defaultDistributorStock,
-    };
-  }
+const StoreState = mongoose.model("StoreState", StoreStateSchema);
+
+let storeStock = { ...defaultStock };
+let orders = [];
+let buyPrice = { ...defaultBuyPrice };
+let sellPrice = { ...defaultSellPrice };
+let distributorStock = normalizeDistributorStock(defaultDistributorStock);
+let storeClosed = false;
+let initPromise = null;
+
+function mergeProductMap(baseMap, incomingMap, fallbackValue = 0) {
+  const out = { ...baseMap };
+  const src = incomingMap && typeof incomingMap === "object" ? incomingMap : {};
+  Object.keys(baseMap).forEach((name) => {
+    if (src[name] !== undefined) {
+      const n = Number(src[name]);
+      out[name] = Number.isFinite(n) ? n : fallbackValue;
+    }
+  });
+  return out;
 }
 
 function saveData() {
-  fs.writeFileSync(
-    DATA_FILE,
-    JSON.stringify({ storeStock, orders, buyPrice, sellPrice, distributorStock }, null, 2),
-    "utf8"
-  );
+  StoreState.findOneAndUpdate(
+    { singletonKey: "main" },
+    {
+      singletonKey: "main",
+      storeStock,
+      orders,
+      buyPrice,
+      sellPrice,
+      distributorStock,
+      storeClosed,
+    },
+    { upsert: true, setDefaultsOnInsert: true, new: true }
+  ).catch((err) => {
+    console.error("MongoDB save failed:", err);
+  });
 }
 
-let { storeStock, orders, buyPrice, sellPrice, distributorStock } = loadData();
+async function loadStateFromMongo() {
+  const doc = await StoreState.findOne({ singletonKey: "main" }).lean();
+  if (!doc) {
+    await StoreState.create({
+      singletonKey: "main",
+      storeStock,
+      orders,
+      buyPrice,
+      sellPrice,
+      distributorStock,
+      storeClosed,
+    });
+    return;
+  }
 
-let storeClosed = false;
+  storeStock = mergeProductMap(defaultStock, doc.storeStock, 0);
+  orders = Array.isArray(doc.orders) ? doc.orders : [];
+  buyPrice = mergeProductMap(defaultBuyPrice, doc.buyPrice, 0);
+  sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
+  distributorStock = normalizeDistributorStock(doc.distributorStock);
+  storeClosed = !!doc.storeClosed;
+}
+
+async function initDatabase() {
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    const mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) {
+      throw new Error("MONGO_URI is missing. Set it in environment before starting server.");
+    }
+    await mongoose.connect(mongoUri);
+    console.log("MongoDB Connected");
+    await loadStateFromMongo();
+  })();
+  return initPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await initDatabase();
+    next();
+  } catch (err) {
+    console.error("Database init failed:", err);
+    res.status(500).json({ status: "error", message: "Database unavailable" });
+  }
+});
 const RESET_CUSTOMER_PASSWORD = process.env.RESET_CUSTOMER_PASSWORD || "291";
 const PRICE_UPDATE_PASSWORD = process.env.PRICE_UPDATE_PASSWORD || "291";
 
@@ -262,7 +313,7 @@ app.post("/order", (req, res) => {
   if (!order.deliveryType) {
     order.deliveryType = order.mode === "pickup" ? "Self Pickup" : "Room Delivery";
   }
-  order.collectFromRoom = distributorRoom;
+  order.collectFromRoom = String(order.collectFromRoom || distributorRoom);
   order.profit = calculateOrderProfit(order);
 
   const deliveryText =
@@ -289,7 +340,7 @@ app.post("/order", (req, res) => {
   console.log("Time:", order.time);
   console.log("=======================\n");
 
-  res.json({ status: "ok", orderId: order.id, cancelWindowMs: 180000 });
+  res.json({ status: "ok", orderId: order.id, cancelWindowMs: 120000 });
 });
 
 app.get("/buy-price", (req, res) => {
@@ -405,8 +456,8 @@ app.post("/cancel-order", (req, res) => {
   }
 
   const now = Date.now();
-  if (now - createdAt > 180000) {
-    return res.status(400).json({ status: "expired", message: "Cancel window over (3 min)" });
+  if (now - createdAt > 120000) {
+    return res.status(400).json({ status: "expired", message: "Cancel window over (2 min)" });
   }
 
   if (Array.isArray(order.items)) {
@@ -647,6 +698,15 @@ app.post("/store-status",(req,res)=>{storeClosed=req.body.closed;
     });
     
 
-app.listen(process.env.PORT || 5000, () => {
-  console.log("Server running");
-});
+const PORT = process.env.PORT || 5000;
+
+initDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  });

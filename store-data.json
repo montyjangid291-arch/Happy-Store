@@ -2,7 +2,7 @@
   "storeStock": {
     "Maggi": 24,
     "Kurkure": 10,
-    "Bhujia": 7,
+    "Bhujia": 3,
     "Ariel": 0,
     "Bhoot Chips": 44,
     "Bingo Onion Chips": 23
@@ -562,7 +562,8 @@
       "createdAt": "2026-02-28T10:50:09.292Z",
       "status": "active",
       "cancelledAt": null,
-      "profit": 100
+      "profit": 100,
+      "excludeFromCustomerStats": true
     },
     {
       "name": "dev",
@@ -589,6 +590,136 @@
       "status": "cancelled",
       "cancelledAt": "2026-02-28T10:56:03.901Z",
       "profit": 200
+    },
+    {
+      "name": "monty",
+      "room": "045",
+      "mode": "delivery",
+      "paymentMode": "cash",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "104",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 10,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 7,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 2110,
+      "id": 1772286517664,
+      "time": "28/2/2026, 7:18:37 pm",
+      "createdAt": "2026-02-28T13:48:37.667Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-28T13:49:37.392Z",
+      "profit": 700
+    },
+    {
+      "name": "monty",
+      "room": "045",
+      "mode": "delivery",
+      "paymentMode": "cash",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "104",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 10,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 1,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 310,
+      "id": 1772286619434,
+      "time": "28/2/2026, 7:20:19 pm",
+      "createdAt": "2026-02-28T13:50:19.440Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 100
+    },
+    {
+      "name": "cssx",
+      "room": "605",
+      "mode": "pickup",
+      "paymentMode": "upi",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 1,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 300,
+      "id": 1772287544812,
+      "time": "28/2/2026, 7:35:44 pm",
+      "createdAt": "2026-02-28T14:05:44.812Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-28T14:07:22.868Z",
+      "profit": 100
+    },
+    {
+      "name": "cssx",
+      "room": "605",
+      "mode": "pickup",
+      "paymentMode": "upi",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 1,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 300,
+      "id": 1772293630600,
+      "time": "28/2/2026, 9:17:10 pm",
+      "createdAt": "2026-02-28T15:47:10.600Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 100
+    },
+    {
+      "name": "cssx",
+      "room": "605",
+      "mode": "pickup",
+      "paymentMode": "upi",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 2,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 600,
+      "id": 1772294915425,
+      "time": "28/2/2026, 9:38:35 pm",
+      "createdAt": "2026-02-28T16:08:35.425Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 200
     }
   ],
   "buyPrice": {
@@ -613,7 +744,7 @@
     "104": {
       "Maggi": 0,
       "Kurkure": 0,
-      "Bhujia": -1,
+      "Bhujia": -2,
       "Ariel": 0,
       "Bhoot Chips": 0,
       "Bingo Onion Chips": 0
@@ -629,7 +760,7 @@
     "607": {
       "Maggi": 0,
       "Kurkure": 0,
-      "Bhujia": 0,
+      "Bhujia": -3,
       "Ariel": -1,
       "Bhoot Chips": -1,
       "Bingo Onion Chips": 0
