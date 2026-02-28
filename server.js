@@ -173,6 +173,7 @@ app.use(async (req, res, next) => {
 });
 const RESET_CUSTOMER_PASSWORD = process.env.RESET_CUSTOMER_PASSWORD || "291";
 const PRICE_UPDATE_PASSWORD = process.env.PRICE_UPDATE_PASSWORD || "291";
+const RESET_PROFIT_PASSWORD = process.env.RESET_PROFIT_PASSWORD || "291";
 
 function formatLocalDate(date) {
   const y = date.getFullYear();
@@ -201,6 +202,10 @@ function isOrderCancelled(order) {
 
 function isOrderExcludedFromCustomerStats(order) {
   return order && order.excludeFromCustomerStats === true;
+}
+
+function isOrderExcludedFromProfitStats(order) {
+  return order && order.excludeFromProfitStats === true;
 }
 
 function normalizePricePayload(body) {
@@ -399,9 +404,10 @@ app.get("/today-report", (req, res) => {
     const dt = getOrderDate(order);
     if (!dt) return;
     const orderTotal = Number(order.total) || 0;
-    const orderProfit = Number.isFinite(Number(order.profit))
+    const orderProfitBase = Number.isFinite(Number(order.profit))
       ? Number(order.profit)
       : calculateOrderProfit(order);
+    const orderProfit = isOrderExcludedFromProfitStats(order) ? 0 : orderProfitBase;
 
     if (formatLocalDate(dt) === todayKey) {
       revenue += orderTotal;
@@ -651,8 +657,35 @@ function handleResetCustomerMoney(req, res) {
   return res.json({ status: "reset", month, affected });
 }
 
+function handleResetProfit(req, res) {
+  const password = String(req.body?.password || "");
+  if (password !== RESET_PROFIT_PASSWORD) {
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+
+  const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
+    ? req.body.month
+    : getMonthKey(new Date());
+
+  let affected = 0;
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const dt = getOrderDate(order);
+    if (!dt || getMonthKey(dt) !== month) return;
+    if (!order.excludeFromProfitStats) {
+      order.excludeFromProfitStats = true;
+      affected += 1;
+    }
+  });
+
+  saveData();
+  return res.json({ status: "reset", month, affected });
+}
+
 app.post("/admin/reset-customer-money", handleResetCustomerMoney);
 app.post("/reset-customer-money", handleResetCustomerMoney);
+app.post("/admin/reset-profit", handleResetProfit);
+app.post("/reset-profit", handleResetProfit);
 
 app.get("/orders", (req, res) => {
   res.json(orders);

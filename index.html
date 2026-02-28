@@ -448,6 +448,7 @@ input:focus, select:focus {
     <div style="font-size:12px;color:#666;margin-top:6px;">Buy/Sell price save karne ke liye password required hai.</div>
     <div id="profitBox">Today Profit: Rs 0</div>
     <div id="monthProfitBox">This Month Profit: Rs 0</div>
+    <button onclick="resetProfitTotals()" style="background:#d9534f;color:#fff;margin-top:8px;">Reset Profit</button>
   </div>
 </div>
 
@@ -1983,6 +1984,46 @@ async function resetCustomerMoney() {
       return;
     }
     alert(`Could not reset customer money: ${msg}`);
+  }
+}
+
+async function resetProfitTotals() {
+  const pass = prompt("Enter reset password for profit");
+  if (pass === null) return;
+  if (!pass.trim()) {
+    alert("Password required");
+    return;
+  }
+
+  try {
+    const payload = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pass.trim() })
+    };
+
+    let res = await apiFetch("/admin/reset-profit", payload);
+    let data = await safeJson(res);
+
+    if ((res.status === 404 || data.status === "not_found") && !res.ok) {
+      // Compatibility fallback if backend exposes non-admin path.
+      res = await apiFetch("/reset-profit", payload);
+      data = await safeJson(res);
+    }
+
+    if (!res.ok || data.status !== "reset") {
+      throw new Error(data.message || data.status || "Reset profit failed");
+    }
+    alert(`Profit reset done for ${data.month}. Affected orders: ${data.affected}`);
+    refreshTodayReport(false);
+  } catch (err) {
+    console.error(err);
+    const msg = String(err.message || "Unknown error");
+    if (msg.includes("Route not found")) {
+      alert("Reset profit route not found on current backend. Please restart/deploy latest server.js, then try again.");
+      return;
+    }
+    alert(`Could not reset profit: ${msg}`);
   }
 }
 
