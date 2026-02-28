@@ -584,27 +584,46 @@ app.get("/customers-report", (req, res) => {
     ? req.query.month
     : getMonthKey(new Date());
 
-  const spendMap = {};
+  const allSpendMap = {};
+  const activeSpendMap = {};
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    if (isOrderExcludedFromCustomerStats(order)) return;
     const dt = getOrderDate(order);
     if (!dt || getMonthKey(dt) !== month) return;
     const key = `${String(order.name || "").trim()}|${String(order.room || "").trim()}`;
-    if (!spendMap[key]) {
-      spendMap[key] = {
+    if (!allSpendMap[key]) {
+      allSpendMap[key] = {
         name: String(order.name || "").trim() || "Unknown",
         room: String(order.room || "").trim() || "-",
         totalSpent: 0,
         ordersCount: 0,
       };
     }
-    spendMap[key].totalSpent += Number(order.total) || 0;
-    spendMap[key].ordersCount += 1;
+    allSpendMap[key].totalSpent += Number(order.total) || 0;
+    allSpendMap[key].ordersCount += 1;
+
+    if (isOrderExcludedFromCustomerStats(order)) return;
+    if (!activeSpendMap[key]) {
+      activeSpendMap[key] = {
+        name: String(order.name || "").trim() || "Unknown",
+        room: String(order.room || "").trim() || "-",
+        totalSpent: 0,
+        ordersCount: 0,
+      };
+    }
+    activeSpendMap[key].totalSpent += Number(order.total) || 0;
+    activeSpendMap[key].ordersCount += 1;
   });
 
-  const customers = Object.values(spendMap).sort((a, b) => b.totalSpent - a.totalSpent);
-  res.json({ month, customers });
+  const allCustomers = Object.values(allSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
+  const customers = Object.values(activeSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
+  res.json({
+    month,
+    customers,
+    allCustomers,
+    activeCustomersCount: customers.length,
+    totalCustomers: allCustomers.length,
+  });
 });
 
 function handleResetCustomerMoney(req, res) {

@@ -1910,14 +1910,22 @@ async function loadAdminCustomersReport() {
     const res = await apiFetch(`/customers-report?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("customers report fetch failed");
     const data = await res.json();
-    const allCustomers = Array.isArray(data.customers) ? data.customers : [];
-    const customers = allCustomers.slice(0, 100);
+    const activeCustomers = Array.isArray(data.customers) ? data.customers : [];
+    const allCustomers = Array.isArray(data.allCustomers) ? data.allCustomers : activeCustomers;
+    const source = activeCustomers.length ? activeCustomers : allCustomers;
+    const customers = source.slice(0, 100);
+    const totalCustomers = Number(data.totalCustomers);
+    const activeCount = Number(data.activeCustomersCount);
+
     if (customers.length === 0) {
-      getById("adminCustomersReport").innerHTML = `<div>No customers found for ${data.month}</div>`;
+      getById("adminCustomersReport").innerHTML = `<div>No customers found for ${data.month || "-"}</div>`;
       return;
     }
     let html = `<div><b>Month:</b> ${data.month}</div>`;
-    html += `<div><b>Total Customers:</b> ${allCustomers.length} | <b>Showing:</b> ${customers.length} (max 100)</div>`;
+    html += `<div><b>Total Customers:</b> ${Number.isFinite(totalCustomers) ? totalCustomers : allCustomers.length} | <b>Active Customers:</b> ${Number.isFinite(activeCount) ? activeCount : activeCustomers.length} | <b>Showing:</b> ${customers.length} (max 100)</div>`;
+    if (activeCustomers.length === 0 && allCustomers.length > 0) {
+      html += `<div style="font-size:12px;color:#666;margin-top:4px;">Note: Active customers 0 hai kyunki month stats reset/excluded ho chuki hain. List all customers ki dikh rahi hai.</div>`;
+    }
     html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;">
 <tr><th style="border:1px solid #ccc;padding:6px;">#</th><th style="border:1px solid #ccc;padding:6px;">Name</th><th style="border:1px solid #ccc;padding:6px;">Room</th><th style="border:1px solid #ccc;padding:6px;">Orders</th><th style="border:1px solid #ccc;padding:6px;">Spent</th></tr>`;
     customers.forEach((c, idx) => {
