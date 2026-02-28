@@ -7,25 +7,252 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-body { margin: 0; font-family: Arial, sans-serif; background: #f2f2f2; }
-header { background: #111; color: #fff; text-align: center; padding: 15px; font-size: 22px; }
-.container { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 15px; padding: 15px; }
-.card { background: #fff; padding: 10px; border-radius: 10px; text-align: center; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
-.card img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; }
-.price { font-weight: bold; margin: 6px 0; }
-.stock { font-size: 14px; margin-bottom: 5px; }
-.btn { background: #25d366; color: #fff; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; margin-top: 5px; }
-.infoBar { background: #e2f0ff; padding: 6px; text-align: center; }
-.deliveryNote { font-size: 13px; color: #333; margin-top: 6px; }
-.weight { font-size: 13px; color: #555; margin-bottom: 4px; }
-#closedOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #ff3b3b; color: #fff; z-index: 999; text-align: center; padding: 10px; font-size: 18px; font-weight: bold; }
-#storeStatus { text-align: center; padding: 6px; background: #d4edda; color: #155724; }
-#cart { text-align: center; }
-#adminPanel { display: none; border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
-#billBox { position: fixed; left: -9999px; top: 0; opacity: 0; background: #fff; padding: 15px; font-family: monospace; width: 280px; border: 1px solid #000; }
-input[type="number"] { width: 70px; }
+:root {
+  --bg: #f3f7fb;
+  --text: #1c2b3a;
+  --muted: #5b6f82;
+  --panel: #ffffffd9;
+  --line: #d7e2ec;
+  --brand: #0f7bb8;
+  --brand-dark: #0b5f8d;
+  --accent: #ff9f45;
+  --shadow: 0 12px 30px rgba(35, 56, 80, 0.13);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 12%, #ffdcb7 0%, transparent 30%),
+    radial-gradient(circle at 88% 18%, #cfe8ff 0%, transparent 34%),
+    linear-gradient(160deg, #f4f8ff 0%, #edf7f8 46%, #fff4e5 100%);
+  min-height: 100vh;
+}
+h2 {
+  font-family: "Space Grotesk", sans-serif;
+  letter-spacing: 0.2px;
+  margin: 22px 0 12px;
+}
+header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  text-align: center;
+  padding: 16px 14px;
+  color: #f7fff9;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.6px;
+  background: linear-gradient(96deg, #12406b, #0f6ea2 55%, #12919f);
+  box-shadow: 0 6px 20px rgba(14, 42, 73, 0.3);
+}
+.container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+.card {
+  background: var(--panel);
+  backdrop-filter: blur(4px);
+  border: 1px solid #ffffff;
+  padding: 12px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transform: translateY(0);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: riseIn 0.4s ease both;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 30px rgba(34, 55, 44, 0.22);
+}
+.card img {
+  width: 100%;
+  height: 146px;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #edf3e6;
+}
+.card h3 {
+  margin: 10px 0 6px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+}
+.price { font-weight: 800; margin: 7px 0; color: #0f5680; }
+.stock { font-size: 14px; margin-bottom: 6px; color: #29465f; }
+.weight { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.btn {
+  background: linear-gradient(135deg, var(--brand), #36a5d8);
+  color: #fff;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  margin-top: 6px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  box-shadow: 0 10px 16px rgba(14, 101, 151, 0.26);
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+.btn:hover { filter: brightness(1.04); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.infoBar {
+  margin: 10px 14px 0;
+  border: 1px solid #d8e7f4;
+  border-radius: 10px;
+  background: #f3fbff;
+  padding: 8px 10px;
+  text-align: center;
+}
+.deliveryNote { font-size: 13px; color: #28485f; margin-top: 8px; font-weight: 600; }
+#closedOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #cc2b2b;
+  color: #fff;
+  z-index: 999;
+  text-align: center;
+  padding: 10px;
+  font-size: 18px;
+  font-weight: 800;
+}
+#storeStatus {
+  text-align: center;
+  padding: 9px 8px;
+  background: #e3f1ff;
+  color: #194f75;
+  font-weight: 700;
+  border-bottom: 1px solid #c8deef;
+}
+#cart {
+  text-align: center;
+  margin: 0 14px;
+  background: var(--panel);
+  border: 1px solid #ffffff;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+}
+#adminPanel {
+  display: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  margin: 10px 14px 0;
+  text-align: left;
+  background: #fffef7;
+  box-shadow: var(--shadow);
+}
+#billBox {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  opacity: 0;
+  background: #fff;
+  padding: 15px;
+  font-family: monospace;
+  width: 280px;
+  border: 1px solid #000;
+}
+input, select {
+  width: min(310px, 90vw);
+  padding: 10px 11px;
+  border: 1px solid #c7d9ea;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: #fbfdff;
+  font-family: "Manrope", sans-serif;
+  font-size: 14px;
+}
+input[type="number"] {
+  width: 74px;
+  padding: 8px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+input:focus, select:focus {
+  outline: 2px solid #9fcaea;
+  outline-offset: 1px;
+  border-color: #4d94c8;
+}
+#liveOrdersGrid { display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 10px; align-items: start; }
+.floorCol { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-height: 220px; }
+.floorTitle { font-weight: 800; margin-bottom: 6px; font-family: "Space Grotesk", sans-serif; }
+.floorMeta { font-size: 12px; color: #56685e; margin-bottom: 8px; }
+.floorOrdersList { max-height: 72vh; overflow-y: auto; padding-right: 4px; }
+.stockEditorRow { margin-bottom: 6px; }
+.priceGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.priceCol { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: #fafdf8; }
+.priceCol h4 { margin: 0 0 8px 0; }
+.distGrid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
+.distCol { border: 1px solid var(--line); border-radius: 10px; background: #fafdf8; padding: 8px; }
+.distCol h4 { margin: 0 0 8px 0; }
+.qrPaymentBox {
+  max-width: 360px;
+  margin: 12px auto 0 auto;
+  background: #f1f9ff;
+  border: 1px solid #d1e4f3;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 6px 14px rgba(26, 88, 130, 0.13);
+}
+.qrPaymentBox h4 {
+  margin: 0 0 8px 0;
+  color: #125f8f;
+  font-family: "Space Grotesk", sans-serif;
+}
+.qrPaymentBox img {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+  border: 1px solid #dceada;
+  border-radius: 8px;
+  background: #fff;
+}
+.qrPaymentHint {
+  font-size: 13px;
+  color: #2a4d68;
+  margin-top: 8px;
+  font-weight: 600;
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 768px) {
+  header { font-size: 21px; }
+  .priceGrid { grid-template-columns: 1fr; }
+  .distGrid { grid-template-columns: 1fr; }
+  .container { padding: 12px; gap: 12px; }
+  #cart, #adminPanel, .infoBar { margin-left: 10px; margin-right: 10px; }
+}
+@media (max-width: 480px) {
+  h2 { font-size: 21px; }
+  header { padding: 14px 10px; font-size: 19px; }
+  .container { grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+  .card { padding: 10px; border-radius: 12px; }
+  .card img { height: 118px; }
+  .card h3 { font-size: 16px; }
+  .btn { width: 100%; padding: 10px 8px; }
+  input, select { width: min(320px, 94vw); }
+  .qrPaymentBox { max-width: 94vw; }
+}
+@media (max-width: 1024px) {
+  #liveOrdersGrid { grid-template-columns: 1fr; }
+  .floorOrdersList { max-height: 45vh; }
+}
 </style>
 </head>
 <body>
@@ -37,75 +264,74 @@ input[type="number"] { width: 70px; }
 </audio>
 <div id="closedOverlay">STORE IS CLOSED - Orders Disabled</div>
 <div id="storeStatus">STORE OPEN</div>
-<div id="topItem" class="infoBar">Top Item: -</div>
 <div id="topCustomersBox" class="infoBar">Top 3 Customers (This Month): Loading...</div>
 
 <h2 style="text-align:center;">Customer Details</h2>
 <div style="text-align:center; margin-bottom:20px;">
   <input id="custName" placeholder="Your Name"><br>
-  <input id="roomNo" placeholder="Room Number"><br>
-
-  <select id="hostel">
-    <option>Boys Hostel</option>
-    <option>Gate Pickup</option>
-    <option>Girls Hostel</option>
-  </select><br>
-
-  <select id="payment">
-    <option>UPI</option>
-    <option>Cash</option>
-    <option>Paytm</option>
-  </select><br>
-
-  <input id="utr" placeholder="UPI Ref No"><br>
+  <input id="roomNo" placeholder="Room Number (3 digits)" inputmode="numeric" maxlength="3" pattern="[0-9]{3}"><br>
 
   <select id="mode">
     <option value="delivery">Room Delivery</option>
     <option value="pickup">Self Pickup</option>
+  </select><br>
+  <select id="paymentMode">
+    <option value="cash">Cash</option>
+    <option value="upi">Online (UPI)</option>
   </select><br>
 
   <div id="deliveryNote" class="deliveryNote">Delivery Charges: Rs 10 (Room Delivery)</div>
 </div>
 
 <div class="container">
-  <div class="card" data-name="Maggi">
+  <div class="card" data-name="Maggi" data-temp-unavailable="true">
     <img src="maggi.jpg" alt="Maggi">
     <h3>Maggi</h3>
     <div class="weight">70g Pack</div>
     <div class="price">Rs 20</div>
-    <div class="stock"></div>
-    <input type="number" id="qty1" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 20, 'qty1')">Add</button>
+    <div class="stock" style="color:#dc3545;font-weight:700;">Temporarily Unavailable</div>
+    <div style="font-size:12px;color:#dc3545;font-weight:700;margin-bottom:6px;">Out of Stock</div>
+    <button class="btn" style="background:#dc3545;cursor:not-allowed;" disabled>Temporarily Unavailable</button>
   </div>
 
-  <div class="card" data-name="Kurkure">
+  <div class="card" data-name="Kurkure" data-temp-unavailable="true">
     <img src="kurkure.jpg" alt="Kurkure">
     <h3>Kurkure</h3>
     <div class="weight">75g Pack</div>
     <div class="price">Rs 20</div>
-    <div class="stock"></div>
-    <input type="number" id="qty2" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 20, 'qty2')">Add</button>
+    <div class="stock" style="color:#dc3545;font-weight:700;">Temporarily Unavailable</div>
+    <div style="font-size:12px;color:#dc3545;font-weight:700;margin-bottom:6px;">Out of Stock</div>
+    <button class="btn" style="background:#dc3545;cursor:not-allowed;" disabled>Temporarily Unavailable</button>
   </div>
 
-  <div class="card" data-name="Bhoot Chips">
+  <div class="card" data-name="Bhoot Chips" data-temp-unavailable="true">
     <img src="bhoot.png" alt="Bhoot Chips">
     <h3>Bhoot Chips</h3>
     <div class="weight">45g Pack</div>
     <div class="price">Rs 20</div>
-    <div class="stock"></div>
-    <input type="number" id="qty5" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 20, 'qty5')">Add</button>
+    <div class="stock" style="color:#dc3545;font-weight:700;">Temporarily Unavailable</div>
+    <div style="font-size:12px;color:#dc3545;font-weight:700;margin-bottom:6px;">Out of Stock</div>
+    <button class="btn" style="background:#e6a9af;cursor:not-allowed;" disabled>Temporarily Unavailable</button>
   </div>
 
-  <div class="card" data-name="Bingo Onion Chips">
-    <img src="bingo1.png" alt="Bingo Onion Chips">
-    <h3>Bingo Onion Chips</h3>
-    <div class="weight">45g Pack</div>
-    <div class="price">Rs 20</div>
+  <div class="card" data-name="Onion Chips">
+    <img src="onion-chips.jfif" alt="Onion Chips">
+    <h3>Onion Chips</h3>
+    <div class="weight">80g Pack</div>
+    <div class="price">Rs 30</div>
     <div class="stock"></div>
-    <input type="number" id="qty6" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 20, 'qty6')">Add</button>
+    <input type="number" id="qty7" value="1" min="1"><br>
+    <button class="btn" onclick="addToCart(this, 30, 'qty7')">Add</button>
+  </div>
+
+  <div class="card" data-name="Unibic Chocolate Chip Cookies">
+    <img src="unibic.jpg" alt="Unibic Chocolate Chip Cookies">
+    <h3>Unibic Chocolate Chip Cookies</h3>
+    <div class="weight">68g Pack</div>
+    <div class="price">Rs 30</div>
+    <div class="stock"></div>
+    <input type="number" id="qty8" value="1" min="1"><br>
+    <button class="btn" onclick="addToCart(this, 30, 'qty8')">Add</button>
   </div>
 
   <div class="card" data-name="Bhujia">
@@ -118,30 +344,41 @@ input[type="number"] { width: 70px; }
     <button class="btn" onclick="addToCart(this, 300, 'qty3')">Add</button>
   </div>
 
-  <div class="card" data-name="Ariel">
-    <img src="ariel.jpg" alt="Ariel">
-    <h3>Ariel</h3>
-    <div class="weight">1L Pack</div>
-    <div class="price">Rs 160</div>
+  <div class="card" data-name="Namkeen">
+    <img src="namkeen.jpg" alt="Namkeen">
+    <h3>Namkeen</h3>
+    <div class="weight">150g Pack</div>
+    <div class="price">Rs 50</div>
     <div class="stock"></div>
-    <input type="number" id="qty4" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 160, 'qty4')">Add</button>
+    <input type="number" id="qty9" value="1" min="1"><br>
+    <button class="btn" onclick="addToCart(this, 50, 'qty9')">Add</button>
   </div>
+
 </div>
 
 <h2 style="text-align:center;">Cart</h2>
 <div id="cart"></div>
 
 <div style="text-align:center; margin:20px;">
-  <button class="btn" onclick="placeOrder()">Place Order on WhatsApp</button>
-  <div id="cancelNote" style="font-size:13px;color:#d9534f;margin-top:8px;">Order cancel allowed only in 3 minutes</div>
+  <button class="btn" onclick="placeOrder()">Place Order + Pay</button>
+  <div id="cancelNote" style="font-size:13px;color:#d9534f;margin-top:8px;">Order cancel allowed only in 2 minutes</div>
+  <div class="qrPaymentBox">
+    <h4>Scan & Pay</h4>
+    <img src="payment-qr.png" alt="Monty Mart QR Payment">
+    <div class="qrPaymentHint">UPI ID: monty291@ptyes </div>
+    <div class="qrPaymentHint">Mobile: 9983729301</div>
+  </div>
   <div id="cancelOrderWrap" style="margin-top:8px;display:none;">
-    <button class="btn" style="background:#ff3b3b;" onclick="cancelMyOrder()">Cancel Last Order</button>
+    <div id="cancelOrdersList" style="margin-bottom:6px;"></div>
     <div id="cancelTimerText" style="font-size:13px;margin-top:4px;"></div>
   </div>
   <div id="waManualWrap" style="display:none;margin-top:8px;font-size:13px;">
     WhatsApp did not open automatically.
     <a id="waManualLink" href="#" target="_blank" rel="noopener noreferrer">Tap to open WhatsApp message</a>
+  </div>
+  <div id="payManualWrap" style="display:none;margin-top:8px;font-size:13px;">
+    Payment app did not open automatically.
+    <a id="payManualLink" href="#">Tap to open payment app</a>
   </div>
   <div id="billManualWrap" style="display:none;margin-top:8px;font-size:13px;">
     Bill auto-download blocked. <a id="billManualLink" href="#" download="bill.png">Tap to download bill</a>
@@ -156,15 +393,18 @@ input[type="number"] { width: 70px; }
     <button onclick="enableOrderSound()">Enable Order Alert Sound</button>
     <div style="margin-top:8px;">This Device ID: <b id="deviceIdBox">-</b></div>
     <div id="earningsBox">Today Earnings: Rs 0</div>
+    <div id="monthEarningsBox">This Month Earning: Rs 0</div>
     <div id="lowStockBox">Low Stock: None</div>
     <div id="ordersList"></div>
 
-    Maggi <input id="sMaggi" type="number"><br>
-    Kurkure <input id="sKurkure" type="number"><br>
-    Bhujia <input id="sBhujia" type="number"><br>
-    Ariel <input id="sAriel" type="number"><br>
-    Bhoot Chips <input id="sBhootChips" type="number"><br>
-    Bingo Onion Chips <input id="sBingoOnionChips" type="number"><br>
+    <h4 style="margin:10px 0 6px 0;">Stock Entry</h4>
+    <div class="stockEditorRow">Maggi <input id="sMaggi" type="number"></div>
+    <div class="stockEditorRow">Kurkure <input id="sKurkure" type="number"></div>
+    <div class="stockEditorRow">Bhujia <input id="sBhujia" type="number"></div>
+    <div class="stockEditorRow">Namkeen <input id="sNamkeen" type="number"></div>
+    <div class="stockEditorRow">Bhoot Chips <input id="sBhootChips" type="number"></div>
+    <div class="stockEditorRow">Onion Chips <input id="sOnionChips" type="number"></div>
+    <div class="stockEditorRow">Unibic Chocolate Chip Cookies <input id="sUnibicCookies" type="number"></div>
 
     <button onclick="saveStock()">Save Stock</button>
     <button onclick="showReport()">Today Report</button>
@@ -179,16 +419,35 @@ input[type="number"] { width: 70px; }
     <button onclick="resetCustomerMoney()" style="background:#d9534f;color:#fff;">Reset Customer Money</button>
     <div id="adminCustomersReport" style="margin-top:10px;"></div>
 
-    <h3>Purchase Price (Profit)</h3>
-    Maggi Buy Rs <input id="bMaggi" type="number"><br>
-    Kurkure Buy Rs <input id="bKurkure" type="number"><br>
-    Bhujia Buy Rs <input id="bBhujia" type="number"><br>
-    Ariel Buy Rs <input id="bAriel" type="number"><br>
-    Bhoot Chips Buy Rs <input id="bBhootChips" type="number"><br>
-    Bingo Onion Chips Buy Rs <input id="bBingoOnionChips" type="number"><br>
+    <h3>Purchase/Sell Price (Profit)</h3>
+    <div class="priceGrid">
+      <div class="priceCol">
+        <h4>Buy Price (Left)</h4>
+        <div class="stockEditorRow">Maggi Buy Rs <input id="bMaggi" type="number"></div>
+        <div class="stockEditorRow">Kurkure Buy Rs <input id="bKurkure" type="number"></div>
+        <div class="stockEditorRow">Bhujia Buy Rs <input id="bBhujia" type="number"></div>
+        <div class="stockEditorRow">Namkeen Buy Rs <input id="bNamkeen" type="number"></div>
+        <div class="stockEditorRow">Bhoot Chips Buy Rs <input id="bBhootChips" type="number"></div>
+        <div class="stockEditorRow">Onion Chips Buy Rs <input id="bOnionChips" type="number"></div>
+        <div class="stockEditorRow">Unibic Cookies Buy Rs <input id="bUnibicCookies" type="number"></div>
+        <button onclick="saveBuyPrice()">Save Buy Price</button>
+      </div>
+      <div class="priceCol">
+        <h4>Sell Price (Right)</h4>
+        <div class="stockEditorRow">Maggi Sell Rs <input id="spMaggi" type="number"></div>
+        <div class="stockEditorRow">Kurkure Sell Rs <input id="spKurkure" type="number"></div>
+        <div class="stockEditorRow">Bhujia Sell Rs <input id="spBhujia" type="number"></div>
+        <div class="stockEditorRow">Namkeen Sell Rs <input id="spNamkeen" type="number"></div>
+        <div class="stockEditorRow">Bhoot Chips Sell Rs <input id="spBhootChips" type="number"></div>
+        <div class="stockEditorRow">Onion Chips Sell Rs <input id="spOnionChips" type="number"></div>
+        <div class="stockEditorRow">Unibic Cookies Sell Rs <input id="spUnibicCookies" type="number"></div>
+        <button onclick="saveSellPrice()">Save Sell Price</button>
+      </div>
+    </div>
 
-    <button onclick="saveBuyPrice()">Save Buy Price</button>
+    <div style="font-size:12px;color:#666;margin-top:6px;">Buy/Sell price save karne ke liye password required hai.</div>
     <div id="profitBox">Today Profit: Rs 0</div>
+    <div id="monthProfitBox">This Month Profit: Rs 0</div>
   </div>
 </div>
 
@@ -201,16 +460,19 @@ input[type="number"] { width: 70px; }
 </div>
 
 <script>
-const realPrice = {
+let realPrice = {
   Maggi: 20,
   Kurkure: 20,
   Bhujia: 300,
-  Ariel: 160,
-  "Bingo Onion Chips": 20,
-  "Bhoot Chips": 20
+  Namkeen: 50,
+  "Bhoot Chips": 20,
+  "Onion Chips": 30,
+  "Unibic Chocolate Chip Cookies": 30
 };
 
-const phone = "919983729301";
+const DEFAULT_WHATSAPP_PHONE = "9983729301";
+const STORE_UPI_ID = "monty291@ptyes";
+const STORE_UPI_NAME = "Monty Mart";
 let cart = [];
 let stockData = {};
 let storeClosed = false;
@@ -218,10 +480,11 @@ let orderCounter = parseInt(localStorage.getItem("orderNo") || "1001", 10);
 let lastSeenOrderId = null;
 let lastSeenOrderCount = 0;
 let ACTIVE_API_BASE = null;
-const LIVE_ORDERS_LIMIT = 100;
+const LIVE_ORDERS_PER_FLOOR_LIMIT = 2000;
 
 const DEVICE_ID_KEY = "mm_device_id";
 const SOUND_ENABLED_KEY = "mm_sound_enabled";
+const ALERT_ALLOWED_EXTRA_KEY = "mm_alert_allowed_extra_ids";
 // Replace these with your actual allowed device IDs (laptop + one mobile).
 const ORDER_ALERT_ALLOWED_DEVICE_IDS = [
   "MM-45SHVENV",
@@ -229,10 +492,57 @@ const ORDER_ALERT_ALLOWED_DEVICE_IDS = [
 ];
 const LAST_ORDER_ID_KEY = "mm_last_order_id";
 const LAST_ORDER_TIME_KEY = "mm_last_order_time";
+const RECENT_CANCEL_ORDERS_KEY = "mm_recent_cancel_orders";
+const CANCEL_WINDOW_MS = 120000;
 const ADMIN_TAP_TARGET = 5;
 const ADMIN_TAP_WINDOW_MS = 6000;
+const LOW_STOCK_THRESHOLD = 15;
+const DISTRIBUTOR_LOW_STOCK_THRESHOLD = 10;
+const DISTRIBUTOR_STOCK_CACHE_KEY = "mm_distributor_stock_cache";
 let adminTapCount = 0;
 let adminTapResetTimer = null;
+let cancelUiTimer = null;
+
+function readRecentCancelableOrders() {
+  try {
+    const raw = localStorage.getItem(RECENT_CANCEL_ORDERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((o) => ({ id: Number(o && o.id), time: Number(o && o.time) }))
+      .filter((o) => Number.isFinite(o.id) && o.id > 0 && Number.isFinite(o.time) && o.time > 0);
+  } catch (_e) {
+    return [];
+  }
+}
+
+function writeRecentCancelableOrders(list) {
+  if (!Array.isArray(list) || list.length === 0) {
+    localStorage.removeItem(RECENT_CANCEL_ORDERS_KEY);
+    return;
+  }
+  localStorage.setItem(RECENT_CANCEL_ORDERS_KEY, JSON.stringify(list));
+}
+
+function getActiveCancelableOrders() {
+  const now = Date.now();
+  const active = readRecentCancelableOrders()
+    .filter((o) => (now - o.time) <= CANCEL_WINDOW_MS)
+    .sort((a, b) => b.time - a.time);
+  writeRecentCancelableOrders(active);
+  return active;
+}
+
+function addRecentCancelableOrder(orderId, orderTime) {
+  const list = getActiveCancelableOrders().filter((o) => o.id !== Number(orderId));
+  list.unshift({ id: Number(orderId), time: Number(orderTime) });
+  writeRecentCancelableOrders(list);
+}
+
+function removeRecentCancelableOrder(orderId) {
+  const list = readRecentCancelableOrders().filter((o) => o.id !== Number(orderId));
+  writeRecentCancelableOrders(list);
+}
 
 function getApiCandidates() {
   const list = [];
@@ -412,6 +722,19 @@ function setWhatsAppManualLink(url) {
   wrap.style.display = "block";
 }
 
+function setPaymentManualLink(url) {
+  const wrap = getById("payManualWrap");
+  const link = getById("payManualLink");
+  if (!wrap || !link) return;
+  link.href = url;
+  wrap.style.display = "block";
+}
+
+function hidePaymentManualLink() {
+  const wrap = getById("payManualWrap");
+  if (wrap) wrap.style.display = "none";
+}
+
 function setBillManualLink(dataUrl, fileName) {
   const wrap = getById("billManualWrap");
   const link = getById("billManualLink");
@@ -458,10 +781,22 @@ function registerSecretAdminTap() {
 
 function isSoundAllowedOnThisDevice() {
   const myId = getOrCreateDeviceId();
-  if (ORDER_ALERT_ALLOWED_DEVICE_IDS.some((x) => String(x).includes("PUT_YOUR_"))) {
+  const configuredIds = ORDER_ALERT_ALLOWED_DEVICE_IDS
+    .map((x) => String(x || "").trim())
+    .filter((x) => x && !x.includes("PUT_YOUR_"));
+  let extraIds = [];
+  try {
+    const raw = localStorage.getItem(ALERT_ALLOWED_EXTRA_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) {
+      extraIds = parsed.map((x) => String(x || "").trim()).filter(Boolean);
+    }
+  } catch (_e) {}
+  const allowed = [...new Set([...configuredIds, ...extraIds])];
+  if (allowed.length === 0) {
     return true;
   }
-  return ORDER_ALERT_ALLOWED_DEVICE_IDS.includes(myId);
+  return allowed.includes(myId);
 }
 
 function playBeepFallback() {
@@ -506,7 +841,15 @@ async function enableOrderSound() {
     audio.currentTime = 0;
     audio.muted = false;
     localStorage.setItem(SOUND_ENABLED_KEY, "1");
-    alert(`Order alert enabled on this device.\nDevice ID: ${getOrCreateDeviceId()}`);
+    const myId = getOrCreateDeviceId();
+    try {
+      const raw = localStorage.getItem(ALERT_ALLOWED_EXTRA_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(parsed) ? parsed.map((x) => String(x || "").trim()).filter(Boolean) : [];
+      if (!list.includes(myId)) list.push(myId);
+      localStorage.setItem(ALERT_ALLOWED_EXTRA_KEY, JSON.stringify(list));
+    } catch (_e) {}
+    alert(`Order alert enabled on this device.\nDevice ID: ${myId}`);
   } catch (err) {
     console.log("Audio permission not granted:", err);
     alert("Could not enable sound. Please try again and allow media/audio.");
@@ -555,21 +898,244 @@ async function updateStoreStatus() {
 }
 
 function updateStockDisplay() {
+  const lowStockItems = [];
   document.querySelectorAll(".card").forEach((card) => {
     const name = card.dataset.name;
+    const tempUnavailable = String(card.dataset.tempUnavailable || "") === "true";
     const stock = Number(stockData[name] || 0);
     const btn = card.querySelector("button");
+    if (tempUnavailable) {
+      card.querySelector(".stock").innerText = "Temporarily Unavailable";
+      btn.innerText = "Temporarily Unavailable";
+      btn.style.background = "#dc3545";
+      btn.dataset.out = "true";
+      btn.disabled = true;
+      return;
+    }
     card.querySelector(".stock").innerText = stock > 0 ? `In Stock: ${stock}` : "Out of Stock";
+    if (stock < LOW_STOCK_THRESHOLD) {
+      lowStockItems.push(`${name} (${stock})`);
+    }
     if (stock <= 0) {
       btn.innerText = "Out of Stock";
       btn.style.background = "#999";
       btn.dataset.out = "true";
+      btn.disabled = true;
     } else {
       btn.innerText = "Add";
       btn.style.background = "#25d366";
       btn.dataset.out = "false";
+      btn.disabled = false;
     }
   });
+
+  const lowBox = getById("lowStockBox");
+  if (lowBox) {
+    lowBox.innerHTML = lowStockItems.length
+      ? `Low Stock (&lt;${LOW_STOCK_THRESHOLD}):<br>${lowStockItems.map((x) => `- ${escapeHtml(x)}`).join("<br>")}`
+      : "Low Stock: None";
+  }
+}
+
+function getDistributorStockPayloadFromInputs() {
+  return {
+    "104": {
+      Maggi: Number(getById("d104Maggi").value) || 0,
+      Kurkure: Number(getById("d104Kurkure").value) || 0,
+      Bhujia: Number(getById("d104Bhujia").value) || 0,
+      Ariel: Number(getById("d104Ariel").value) || 0,
+      "Bhoot Chips": Number(getById("d104BhootChips").value) || 0
+    },
+    "407": {
+      Maggi: Number(getById("d407Maggi").value) || 0,
+      Kurkure: Number(getById("d407Kurkure").value) || 0,
+      Bhujia: Number(getById("d407Bhujia").value) || 0,
+      Ariel: Number(getById("d407Ariel").value) || 0,
+      "Bhoot Chips": Number(getById("d407BhootChips").value) || 0
+    },
+    "607": {
+      Maggi: Number(getById("d607Maggi").value) || 0,
+      Kurkure: Number(getById("d607Kurkure").value) || 0,
+      Bhujia: Number(getById("d607Bhujia").value) || 0,
+      Ariel: Number(getById("d607Ariel").value) || 0,
+      "Bhoot Chips": Number(getById("d607BhootChips").value) || 0
+    }
+  };
+}
+
+function readDistributorStockCache() {
+  try {
+    const raw = localStorage.getItem(DISTRIBUTOR_STOCK_CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== "object") return null;
+    return data;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function writeDistributorStockCache(data) {
+  try {
+    localStorage.setItem(DISTRIBUTOR_STOCK_CACHE_KEY, JSON.stringify(data));
+  } catch (_err) {
+    // ignore local cache failures
+  }
+}
+
+function fillDistributorStockInputs(data) {
+  const s104 = data["104"] || {};
+  const s407 = data["407"] || {};
+  const s607 = data["607"] || {};
+  getById("d104Maggi").value = Number(s104.Maggi || 0);
+  getById("d104Kurkure").value = Number(s104.Kurkure || 0);
+  getById("d104Bhujia").value = Number(s104.Bhujia || 0);
+  getById("d104Ariel").value = Number(s104.Ariel || 0);
+  getById("d104BhootChips").value = Number(s104["Bhoot Chips"] || 0);
+
+  getById("d407Maggi").value = Number(s407.Maggi || 0);
+  getById("d407Kurkure").value = Number(s407.Kurkure || 0);
+  getById("d407Bhujia").value = Number(s407.Bhujia || 0);
+  getById("d407Ariel").value = Number(s407.Ariel || 0);
+  getById("d407BhootChips").value = Number(s407["Bhoot Chips"] || 0);
+
+  getById("d607Maggi").value = Number(s607.Maggi || 0);
+  getById("d607Kurkure").value = Number(s607.Kurkure || 0);
+  getById("d607Bhujia").value = Number(s607.Bhujia || 0);
+  getById("d607Ariel").value = Number(s607.Ariel || 0);
+  getById("d607BhootChips").value = Number(s607["Bhoot Chips"] || 0);
+}
+
+function renderDistributorLowStockFromData(data) {
+  ["104", "407", "607"].forEach((room) => {
+    const box = getById(`d${room}LowStock`);
+    if (!box) return;
+    const map = data[room] || {};
+    const low = [];
+    Object.keys(map).forEach((item) => {
+      const qty = Number(map[item]) || 0;
+      if (qty < DISTRIBUTOR_LOW_STOCK_THRESHOLD) {
+        low.push(`${item} (${qty})`);
+      }
+    });
+    box.innerHTML = low.length
+      ? `Low Stock (&lt;${DISTRIBUTOR_LOW_STOCK_THRESHOLD}):<br>${low.map((x) => `- ${escapeHtml(x)}`).join("<br>")}`
+      : "Low Stock: None";
+  });
+}
+
+async function loadDistributorStock() {
+  try {
+    const res = await apiFetch(`/distributor-stock?nocache=${Date.now()}`);
+    if (!res.ok) throw new Error("distributor stock fetch failed");
+    const data = await safeJson(res);
+    writeDistributorStockCache(data || {});
+    fillDistributorStockInputs(data || {});
+    renderDistributorLowStockFromData(data || {});
+  } catch (err) {
+    console.error(err);
+    const msg = String(err && err.message ? err.message : "");
+    if (msg.includes("Route not found")) {
+      const cached = readDistributorStockCache();
+      if (cached) {
+        fillDistributorStockInputs(cached);
+        renderDistributorLowStockFromData(cached);
+      }
+    }
+  }
+}
+
+function renderDistributorMonthSummary(data) {
+  const month = data && data.month ? data.month : "-";
+  const summary = (data && data.summary) || {};
+  const s104 = summary["104"] || { ordersCount: 0, totalAmount: 0 };
+  const s407 = summary["407"] || { ordersCount: 0, totalAmount: 0 };
+  const s607 = summary["607"] || { ordersCount: 0, totalAmount: 0 };
+
+  const html = [
+    `<b>Distributor Monthly Totals (${escapeHtml(month)})</b>`,
+    `104: Orders ${Number(s104.ordersCount) || 0}, Total Rs ${Number(s104.totalAmount) || 0}`,
+    `407: Orders ${Number(s407.ordersCount) || 0}, Total Rs ${Number(s407.totalAmount) || 0}`,
+    `607: Orders ${Number(s607.ordersCount) || 0}, Total Rs ${Number(s607.totalAmount) || 0}`
+  ].join("<br>");
+  getById("distributorMonthSummary").innerHTML = html;
+}
+
+async function loadDistributorMonthSummary() {
+  try {
+    const res = await apiFetch(`/distributor-month-summary?nocache=${Date.now()}`);
+    if (!res.ok) throw new Error("distributor month summary fetch failed");
+    const data = await safeJson(res);
+    renderDistributorMonthSummary(data || {});
+  } catch (err) {
+    const msg = String(err && err.message ? err.message : "");
+    if (msg.includes("Route not found")) {
+      // fallback from /orders
+      try {
+        const res2 = await apiFetch(`/orders?nocache=${Date.now()}`);
+        if (!res2.ok) throw new Error("orders fallback failed");
+        const orders = await safeJson(res2);
+        const month = (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        })();
+        const summary = {
+          "104": { ordersCount: 0, totalAmount: 0 },
+          "407": { ordersCount: 0, totalAmount: 0 },
+          "607": { ordersCount: 0, totalAmount: 0 }
+        };
+        (Array.isArray(orders) ? orders : []).forEach((o) => {
+          if (o && o.status === "cancelled") return;
+          const dt = o && o.createdAt ? new Date(o.createdAt) : new Date(o.time);
+          if (Number.isNaN(dt.getTime())) return;
+          const mk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+          if (mk !== month) return;
+          const roomNum = Number(o && o.room);
+          const room = Number.isFinite(roomNum) && roomNum <= 299 ? "104"
+            : Number.isFinite(roomNum) && roomNum <= 599 ? "407"
+            : "607";
+          summary[room].ordersCount += 1;
+          summary[room].totalAmount += Number(o.total) || 0;
+        });
+        renderDistributorMonthSummary({ month, summary });
+        return;
+      } catch (_e) {
+        // ignore and fall through
+      }
+    }
+    getById("distributorMonthSummary").innerText = "Distributor Monthly Totals: Could not load";
+  }
+}
+
+async function saveDistributorStock() {
+  try {
+    const payload = getDistributorStockPayloadFromInputs();
+    const res = await apiFetch("/distributor-stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "saved") {
+      throw new Error(data.message || "save failed");
+    }
+    writeDistributorStockCache(data.distributorStock || payload);
+    fillDistributorStockInputs(data.distributorStock || payload);
+    renderDistributorLowStockFromData(data.distributorStock || payload);
+    alert("Distributor stock saved");
+  } catch (err) {
+    console.error(err);
+    const msg = String(err && err.message ? err.message : "Unknown error");
+    if (msg.includes("Route not found")) {
+      const payload = getDistributorStockPayloadFromInputs();
+      writeDistributorStockCache(payload);
+      fillDistributorStockInputs(payload);
+      renderDistributorLowStockFromData(payload);
+      alert("Backend route not found (404). Distributor stock local cache me save ho gaya. Latest server.js deploy/restart karo.");
+      return;
+    }
+    alert(`Could not save distributor stock: ${msg}`);
+  }
 }
 
 function showCart() {
@@ -578,13 +1144,19 @@ function showCart() {
     return;
   }
   let html = "";
-  let total = 0;
+  let itemsTotal = 0;
   cart.forEach((item, idx) => {
     const line = item.price * item.qty;
-    total += line;
+    itemsTotal += line;
     html += `${item.name} x${item.qty} = Rs ${line} <button onclick="removeItem(${idx})">Remove</button><br>`;
   });
-  html += `<b>Total Rs ${total}</b>`;
+  const mode = getById("mode").value;
+  const deliveryCharge = getDeliveryCharge(mode);
+  const grandTotal = itemsTotal + deliveryCharge;
+  html += `<hr style="max-width:320px;">`;
+  html += `Items Total: Rs ${itemsTotal}<br>`;
+  html += `Delivery Charges: Rs ${deliveryCharge}<br>`;
+  html += `<b>Grand Total: Rs ${grandTotal}</b>`;
   getById("cart").innerHTML = html;
 }
 
@@ -635,8 +1207,23 @@ function addToCart(btn, _price, qtyId) {
 
 function getDeliveryCharge(mode) {
   if (mode === "pickup") return 0;
-  const hour = new Date().getHours();
-  return hour >= 8 && hour < 19 ? 10 : 20;
+  return 10;
+}
+
+function normalizeWhatsAppPhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length === 10) return `91${digits}`;
+  return digits;
+}
+
+function buildUpiPaymentUrl(total, orderNo, customerName, roomNo) {
+  const amount = Number(total || 0).toFixed(2);
+  const txnNote = `Monty Mart Order ${orderNo} - ${customerName} (Room ${roomNo})`;
+  return `upi://pay?pa=${encodeURIComponent(STORE_UPI_ID)}&pn=${encodeURIComponent(STORE_UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
+}
+
+function getOrderRoutingByRoom(roomNo) {
+  return { collectFromRoom: "605", whatsappPhone: "9983729301" };
 }
 
 function renderDeliveryNote() {
@@ -703,66 +1290,89 @@ async function placeOrder() {
 
   const name = getById("custName").value.trim();
   const room = getById("roomNo").value.trim();
-  const hostel = getById("hostel").value;
-  const payment = getById("payment").value;
-  const utr = getById("utr").value.trim();
   const mode = getById("mode").value;
+  const paymentMode = getById("paymentMode").value;
+  hidePaymentManualLink();
 
   if (!/^[A-Za-z ]+$/.test(name)) return alert("Invalid name");
-  if (!/^[0-9]+$/.test(room)) return alert("Room must be number");
-  if (payment !== "Cash" && !/^[0-9A-Za-z]{4,20}$/.test(utr)) return alert("Invalid payment reference");
+  if (!/^[0-9]{3}$/.test(room)) return alert("Room must be exactly 3 digits");
 
-  const items = cart.map((item) => ({ ...item }));
+  const items = cart.map((item) => ({
+    ...item,
+    price: Number(realPrice[item.name] !== undefined ? realPrice[item.name] : item.price) || 0
+  }));
   const subTotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const deliveryCharge = getDeliveryCharge(mode);
   const total = subTotal + deliveryCharge;
   const deliveryType = mode === "pickup" ? "Self Pickup" : "Room Delivery";
+  const paymentType = paymentMode === "upi" ? "UPI (Online)" : "Cash";
+  const routing = getOrderRoutingByRoom(room);
+  const whatsappPhone = normalizeWhatsAppPhone(routing.whatsappPhone);
 
   let msg = "HOSTEL STORE ORDER\n";
   msg += `Order No: ${orderCounter}\n`;
   msg += `Name: ${name}\n`;
   msg += `Room No: ${room}\n`;
-  msg += `Hostel: ${hostel}\n`;
   msg += `Delivery Type: ${deliveryType}\n`;
-  msg += `Payment: ${payment}\n`;
-  if (payment !== "Cash") msg += `Ref No: ${utr}\n`;
+  msg += `Payment Mode: ${paymentType}\n`;
+  if (mode === "pickup") {
+    msg += `Collect From Room No: ${routing.collectFromRoom}\n`;
+  }
   msg += "\nITEMS\n";
   items.forEach((item) => {
     msg += `${item.name} x${item.qty} = Rs ${item.price * item.qty}\n`;
   });
-  if (mode === "pickup") {
-    msg += `\nPickup From: Room 605`;
-  }
   msg += `\nItems Total: Rs ${subTotal}`;
   msg += `\nDelivery Charges: Rs ${deliveryCharge}`;
   msg += `\nGrand Total: Rs ${total}`;
-  msg += "\nOrder cancel allowed only in 3 minutes";
+  msg += "\nOrder cancel allowed only in 2 minutes";
   msg += "\nEstimated Time: 10-15 min";
 
   const payload = {
     name,
     room,
-    hostel,
     mode,
+    paymentMode,
     deliveryType,
-    payment,
-    utr,
+    collectFromRoom: routing.collectFromRoom,
+    assignedWhatsappPhone: whatsappPhone,
     deliveryCharge,
     items,
     total
   };
 
-  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  const waUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}`;
+  const upiUrl = buildUpiPaymentUrl(total, orderCounter, name, room);
   const quickBillDataUrl = buildTextBillDataUrl(msg);
   const quickBillName = `bill-${orderCounter}.png`;
   setBillManualLink(quickBillDataUrl, quickBillName);
   // Try immediate download in direct click context (most reliable chance).
   triggerBillDownload(quickBillDataUrl, quickBillName);
-  setWhatsAppManualLink(waUrl);
-  // Open WhatsApp immediately on click.
-  const reservedWaWindow = window.open(waUrl, "_blank");
-  if (!reservedWaWindow) {
+
+  if (paymentMode === "upi") {
+    setPaymentManualLink(upiUrl);
+    // Open payment app first for UPI payments.
+    const reservedPayWindow = window.open(upiUrl, "_blank");
+    if (!reservedPayWindow) {
+      setPaymentManualLink(upiUrl);
+    }
     setWhatsAppManualLink(waUrl);
+    const sendNow = confirm("Payment complete ho gaya ho to OK dabao. Uske baad WhatsApp message open hoga.");
+    if (sendNow) {
+      const waWindowAfterPay = window.open(waUrl, "_blank");
+      if (!waWindowAfterPay) {
+        setWhatsAppManualLink(waUrl);
+      }
+    } else {
+      alert("Payment complete hone ke baad 'Tap to open WhatsApp message' se message bhej dena.");
+    }
+  } else {
+    // Cash mode: only WhatsApp message flow.
+    setWhatsAppManualLink(waUrl);
+    const reservedWaWindow = window.open(waUrl, "_blank");
+    if (!reservedWaWindow) {
+      setWhatsAppManualLink(waUrl);
+    }
   }
 
   try {
@@ -778,6 +1388,7 @@ async function placeOrder() {
     }
     localStorage.setItem(LAST_ORDER_ID_KEY, String(data.orderId));
     localStorage.setItem(LAST_ORDER_TIME_KEY, String(Date.now()));
+    addRecentCancelableOrder(data.orderId, Date.now());
     showCancelOrderUI();
   } catch (err) {
     console.error(err);
@@ -811,6 +1422,7 @@ function showAdmin() {
   }
   getById("adminPanel").style.display = "block";
   loadBuyPriceFromServer();
+  loadSellPriceFromServer();
   refreshTodayReport(false);
   loadAdminCustomersReport();
 }
@@ -820,9 +1432,10 @@ async function saveStock() {
     Maggi: +getById("sMaggi").value,
     Kurkure: +getById("sKurkure").value,
     Bhujia: +getById("sBhujia").value,
-    Ariel: +getById("sAriel").value,
+    Namkeen: +getById("sNamkeen").value,
     "Bhoot Chips": +getById("sBhootChips").value,
-    "Bingo Onion Chips": +getById("sBingoOnionChips").value
+    "Onion Chips": +getById("sOnionChips").value,
+    "Unibic Chocolate Chip Cookies": +getById("sUnibicCookies").value
   };
 
   updateStockDisplay();
@@ -875,35 +1488,116 @@ async function loadBuyPriceFromServer() {
     getById("bMaggi").value = Number(buy.Maggi || 0);
     getById("bKurkure").value = Number(buy.Kurkure || 0);
     getById("bBhujia").value = Number(buy.Bhujia || 0);
-    getById("bAriel").value = Number(buy.Ariel || 0);
+    getById("bNamkeen").value = Number(buy.Namkeen || 0);
     getById("bBhootChips").value = Number(buy["Bhoot Chips"] || 0);
-    getById("bBingoOnionChips").value = Number(buy["Bingo Onion Chips"] || 0);
+    getById("bOnionChips").value = Number(buy["Onion Chips"] || 0);
+    getById("bUnibicCookies").value = Number(buy["Unibic Chocolate Chip Cookies"] || 0);
   } catch (err) {
     console.log("Could not load buy prices:", err);
   }
 }
 
+function renderSellPriceCards() {
+  document.querySelectorAll(".card").forEach((card) => {
+    const name = card.dataset.name;
+    const priceNode = card.querySelector(".price");
+    if (priceNode && Number.isFinite(Number(realPrice[name]))) {
+      priceNode.innerText = `Rs ${Number(realPrice[name])}`;
+    }
+  });
+}
+
+async function loadSellPriceFromServer() {
+  try {
+    const res = await apiFetch(`/sell-price?nocache=${Date.now()}`);
+    if (!res.ok) throw new Error("sell price fetch failed");
+    const sell = await res.json();
+    const pick = (key, fallback) => {
+      const raw = sell && Object.prototype.hasOwnProperty.call(sell, key) ? sell[key] : fallback;
+      const num = Number(raw);
+      return Number.isFinite(num) ? num : fallback;
+    };
+
+    realPrice = {
+      ...realPrice,
+      Maggi: pick("Maggi", Number(realPrice.Maggi || 20)),
+      Kurkure: pick("Kurkure", Number(realPrice.Kurkure || 20)),
+      Bhujia: pick("Bhujia", Number(realPrice.Bhujia || 300)),
+      Namkeen: pick("Namkeen", Number(realPrice.Namkeen || 50)),
+      "Bhoot Chips": pick("Bhoot Chips", Number(realPrice["Bhoot Chips"] || 20)),
+      "Onion Chips": pick("Onion Chips", Number(realPrice["Onion Chips"] || 30)),
+      "Unibic Chocolate Chip Cookies": pick("Unibic Chocolate Chip Cookies", Number(realPrice["Unibic Chocolate Chip Cookies"] || 30))
+    };
+
+    getById("spMaggi").value = Number(realPrice.Maggi || 0);
+    getById("spKurkure").value = Number(realPrice.Kurkure || 0);
+    getById("spBhujia").value = Number(realPrice.Bhujia || 0);
+    getById("spNamkeen").value = Number(realPrice.Namkeen || 0);
+    getById("spBhootChips").value = Number(realPrice["Bhoot Chips"] || 0);
+    getById("spOnionChips").value = Number(realPrice["Onion Chips"] || 0);
+    getById("spUnibicCookies").value = Number(realPrice["Unibic Chocolate Chip Cookies"] || 0);
+
+    renderSellPriceCards();
+  } catch (err) {
+    console.log("Could not load sell prices:", err);
+  }
+}
+
 async function saveBuyPrice() {
+  const password = prompt("Enter password to update BUY prices");
+  if (password === null) return;
   const buy = {
     Maggi: +getById("bMaggi").value,
     Kurkure: +getById("bKurkure").value,
     Bhujia: +getById("bBhujia").value,
-    Ariel: +getById("bAriel").value,
+    Namkeen: +getById("bNamkeen").value,
     "Bhoot Chips": +getById("bBhootChips").value,
-    "Bingo Onion Chips": +getById("bBingoOnionChips").value
+    "Onion Chips": +getById("bOnionChips").value,
+    "Unibic Chocolate Chip Cookies": +getById("bUnibicCookies").value
   };
   try {
     const res = await apiFetch("/buy-price", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buy)
+      body: JSON.stringify({ password: password.trim(), prices: buy })
     });
-    if (!res.ok) throw new Error("buy price save failed");
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "saved") throw new Error(data.message || "buy price save failed");
     alert("Buy price saved");
     refreshTodayReport(false);
   } catch (err) {
     console.error(err);
-    alert("Could not save buy price");
+    alert(`Could not save buy price: ${err.message || "Unknown error"}`);
+  }
+}
+
+async function saveSellPrice() {
+  const password = prompt("Enter password to update SELL prices");
+  if (password === null) return;
+  const sell = {
+    Maggi: +getById("spMaggi").value,
+    Kurkure: +getById("spKurkure").value,
+    Bhujia: +getById("spBhujia").value,
+    Namkeen: +getById("spNamkeen").value,
+    "Bhoot Chips": +getById("spBhootChips").value,
+    "Onion Chips": +getById("spOnionChips").value,
+    "Unibic Chocolate Chip Cookies": +getById("spUnibicCookies").value
+  };
+  try {
+    const res = await apiFetch("/sell-price", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: password.trim(), prices: sell })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "saved") throw new Error(data.message || "sell price save failed");
+    realPrice = { ...realPrice, ...sell };
+    renderSellPriceCards();
+    alert("Sell price saved");
+    refreshTodayReport(false);
+  } catch (err) {
+    console.error(err);
+    alert(`Could not save sell price: ${err.message || "Unknown error"}`);
   }
 }
 
@@ -914,7 +1608,9 @@ async function refreshTodayReport(showPopup) {
     const data = await safeJson(res);
 
     getById("earningsBox").innerText = `Today Earnings: Rs ${data.revenue || 0}`;
+    getById("monthEarningsBox").innerText = `This Month Earning: Rs ${data.monthRevenue || 0}`;
     getById("profitBox").innerText = `Today Profit: Rs ${data.profit || 0}`;
+    getById("monthProfitBox").innerText = `This Month Profit: Rs ${data.monthProfit || 0}`;
 
     if (!showPopup) return;
 
@@ -931,6 +1627,8 @@ async function refreshTodayReport(showPopup) {
     text += `\nOrders: ${data.ordersCount || 0}`;
     text += `\nRevenue Rs ${data.revenue || 0}`;
     text += `\nProfit Rs ${data.profit || 0}`;
+    text += `\nMonth Revenue Rs ${data.monthRevenue || 0}`;
+    text += `\nMonth Profit Rs ${data.monthProfit || 0}`;
     alert(text);
   } catch (err) {
     console.error(err);
@@ -957,11 +1655,10 @@ async function loadOrders() {
     if (newestOrderId > 0) lastSeenOrderId = newestOrderId;
     lastSeenOrderCount = allOrders.length;
 
-    const displayOrders = allOrders.slice(-LIVE_ORDERS_LIMIT).reverse();
-    let html = `<h3>Live Orders (${displayOrders.length}/${allOrders.length})</h3>`;
-    displayOrders.forEach((o) => {
+    function orderCardHtml(o) {
       const orderStatus = o.status === "cancelled" ? "Cancelled" : (o.status === "accepted" ? "Accepted" : "Active");
       const statusColor = o.status === "cancelled" ? "#d9534f" : (o.status === "accepted" ? "#0d6efd" : "#198754");
+      const orderId = Number(o && o.id) || 0;
       const items = Array.isArray(o.items) ? o.items : [];
       const itemRows = items.map((i) => {
         const qty = Number(i.qty) || 0;
@@ -972,9 +1669,10 @@ async function loadOrders() {
       const itemsTotal = items.reduce((sum, i) => sum + ((Number(i.qty) || 0) * (Number(i.price) || 0)), 0);
       const deliveryCharge = Number(o.deliveryCharge) || 0;
       const grandTotal = Number(o.total) || (itemsTotal + deliveryCharge);
-      html += `
+      return `
 <div style="border:1px solid #aaa;padding:8px;margin:5px;">
 <b>${o.name}</b> (Room ${o.room})<br>
+Order No: ${orderId || "-"}<br>
 Type: <b>${o.mode === "pickup" ? "Self Pickup" : "Room Delivery"}</b><br>
 Status: <b style="color:${statusColor};">${orderStatus}</b><br>
 Items:<br>
@@ -982,11 +1680,15 @@ ${itemRows || "No items"}<br>
 Items Total: Rs ${itemsTotal}<br>
 Delivery: Rs ${deliveryCharge}<br>
 Grand Total: Rs ${grandTotal}<br>
+${(o.status !== "cancelled" && orderId > 0) ? `<button class="btn" style="background:#ff3b3b;padding:6px 10px;margin-top:6px;" onclick="adminQuickCancelOrder(${orderId})">Quick Cancel</button><br>` : ""}
 <small>${o.time}</small>
 </div>
 `;
-    });
+    }
 
+    const latestOrders = allOrders.slice().reverse().slice(0, LIVE_ORDERS_PER_FLOOR_LIMIT);
+    let html = `<h3>Live Orders (6th Floor Dispatch) (${latestOrders.length}/${allOrders.length})</h3>`;
+    html += `<div class="floorCol"><div class="floorMeta">Collect from Room 605 | WhatsApp: 9983729301</div><div class="floorOrdersList">${latestOrders.length ? latestOrders.map(orderCardHtml).join("") : "<div>No orders</div>"}</div></div>`;
     getById("liveOrders").innerHTML = html;
   } catch (err) {
     console.error(err);
@@ -1006,55 +1708,76 @@ async function loadStockFromServer() {
 }
 
 function showCancelOrderUI() {
-  const id = localStorage.getItem(LAST_ORDER_ID_KEY);
-  const time = Number(localStorage.getItem(LAST_ORDER_TIME_KEY) || 0);
   const wrap = getById("cancelOrderWrap");
   const timerText = getById("cancelTimerText");
-  if (!id || !time) {
-    wrap.style.display = "none";
-    return;
+  const listBox = getById("cancelOrdersList");
+  const activeOrders = getActiveCancelableOrders();
+
+  if (cancelUiTimer) {
+    clearTimeout(cancelUiTimer);
+    cancelUiTimer = null;
   }
-  const diff = Date.now() - time;
-  const remainingMs = 180000 - diff;
-  if (remainingMs <= 0) {
+
+  if (!activeOrders.length) {
     wrap.style.display = "none";
+    if (listBox) listBox.innerHTML = "";
+    if (timerText) timerText.innerText = "";
     localStorage.removeItem(LAST_ORDER_ID_KEY);
     localStorage.removeItem(LAST_ORDER_TIME_KEY);
     return;
   }
+
   wrap.style.display = "block";
-  const sec = Math.ceil(remainingMs / 1000);
-  timerText.innerText = `Cancel window left: ${sec}s`;
-  setTimeout(showCancelOrderUI, 1000);
+  if (listBox) {
+    listBox.innerHTML = activeOrders.map((o) => {
+      const leftSec = Math.max(0, Math.ceil((CANCEL_WINDOW_MS - (Date.now() - o.time)) / 1000));
+      return `<button class="btn" style="background:#ff3b3b;margin:4px 3px;padding:7px 10px;" onclick="cancelMyOrder(${o.id})">Cancel #${o.id} (${leftSec}s)</button>`;
+    }).join("");
+  }
+
+  const nearestExpiryMs = Math.max(0, CANCEL_WINDOW_MS - (Date.now() - activeOrders[activeOrders.length - 1].time));
+  const nearestSec = Math.ceil(nearestExpiryMs / 1000);
+  if (timerText) timerText.innerText = `Last 2 minutes ke orders cancel ho sakte hain (${nearestSec}s left)`;
+  cancelUiTimer = setTimeout(showCancelOrderUI, 1000);
 }
 
-async function cancelMyOrder() {
-  const orderId = Number(localStorage.getItem(LAST_ORDER_ID_KEY) || 0);
-  const orderTime = Number(localStorage.getItem(LAST_ORDER_TIME_KEY) || 0);
-  if (!orderId || !orderTime) {
+async function cancelMyOrder(orderIdArg) {
+  const orderId = Number(orderIdArg || 0);
+  if (!orderId) {
     alert("No recent order found");
     return;
   }
-  if (Date.now() - orderTime > 180000) {
-    alert("Cancel window expired (3 min)");
-    localStorage.removeItem(LAST_ORDER_ID_KEY);
-    localStorage.removeItem(LAST_ORDER_TIME_KEY);
+  const activeOrders = getActiveCancelableOrders();
+  const found = activeOrders.find((o) => o.id === orderId);
+  if (!found) {
+    alert("Cancel window expired (2 min)");
     showCancelOrderUI();
     return;
   }
+
+  const ok = confirm(`Order No ${orderId} cancel karna hai?`);
+  if (!ok) return;
+
   try {
     const res = await apiFetch("/cancel-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId })
+      body: JSON.stringify({ orderId, confirmOrderId: orderId })
     });
     const data = await safeJson(res);
     if (!res.ok || data.status !== "cancelled") {
       throw new Error(data.message || data.status || "Cancel failed");
     }
-    alert("Order cancelled successfully");
-    localStorage.removeItem(LAST_ORDER_ID_KEY);
-    localStorage.removeItem(LAST_ORDER_TIME_KEY);
+    alert(`Order #${orderId} cancelled successfully`);
+    removeRecentCancelableOrder(orderId);
+    const activeAfter = getActiveCancelableOrders();
+    if (!activeAfter.length) {
+      localStorage.removeItem(LAST_ORDER_ID_KEY);
+      localStorage.removeItem(LAST_ORDER_TIME_KEY);
+    } else {
+      localStorage.setItem(LAST_ORDER_ID_KEY, String(activeAfter[0].id));
+      localStorage.setItem(LAST_ORDER_TIME_KEY, String(activeAfter[0].time));
+    }
     showCancelOrderUI();
     loadOrders();
     loadStockFromServer();
@@ -1069,8 +1792,46 @@ async function cancelMyOrder() {
   }
 }
 
+async function adminQuickCancelOrder(orderIdArg) {
+  const orderId = Number(orderIdArg || 0);
+  if (!orderId) {
+    alert("Invalid order id");
+    return;
+  }
+  const ok = confirm(`Admin quick cancel: Order #${orderId}?`);
+  if (!ok) return;
+  try {
+    const res = await apiFetch("/cancel-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, confirmOrderId: orderId })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "cancelled") {
+      throw new Error(data.message || data.status || "Cancel failed");
+    }
+    removeRecentCancelableOrder(orderId);
+    showCancelOrderUI();
+    loadOrders();
+    loadStockFromServer();
+    refreshTodayReport(false);
+    loadTopCustomers();
+    if (getById("adminPanel").style.display === "block") {
+      loadAdminCustomersReport();
+    }
+    alert(`Order #${orderId} cancelled by admin`);
+  } catch (err) {
+    console.error(err);
+    alert(`Admin cancel failed: ${err.message || "Unknown error"}`);
+  }
+}
+
 async function adminUpdateOrderStatus(orderId, action) {
-  alert("Order action disabled. Admin can only view live orders.");
+  if (action === "cancel") {
+    await adminQuickCancelOrder(orderId);
+    return;
+  }
+  alert("Only cancel action is enabled.");
 }
 
 async function loadTopCustomers() {
@@ -1140,12 +1901,14 @@ async function loadAdminCustomersReport() {
     const res = await apiFetch(`/customers-report?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("customers report fetch failed");
     const data = await res.json();
-    const customers = Array.isArray(data.customers) ? data.customers : [];
+    const allCustomers = Array.isArray(data.customers) ? data.customers : [];
+    const customers = allCustomers.slice(0, 100);
     if (customers.length === 0) {
       getById("adminCustomersReport").innerHTML = `<div>No customers found for ${data.month}</div>`;
       return;
     }
     let html = `<div><b>Month:</b> ${data.month}</div>`;
+    html += `<div><b>Total Customers:</b> ${allCustomers.length} | <b>Showing:</b> ${customers.length} (max 100)</div>`;
     html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;">
 <tr><th style="border:1px solid #ccc;padding:6px;">#</th><th style="border:1px solid #ccc;padding:6px;">Name</th><th style="border:1px solid #ccc;padding:6px;">Room</th><th style="border:1px solid #ccc;padding:6px;">Orders</th><th style="border:1px solid #ccc;padding:6px;">Spent</th></tr>`;
     customers.forEach((c, idx) => {
@@ -1206,7 +1969,14 @@ async function resetCustomerMoney() {
   }
 }
 
-getById("mode").addEventListener("change", renderDeliveryNote);
+getById("mode").addEventListener("change", () => {
+  renderDeliveryNote();
+  showCart();
+});
+getById("roomNo").addEventListener("input", (e) => {
+  const clean = String(e.target.value || "").replace(/\D/g, "").slice(0, 3);
+  e.target.value = clean;
+});
 getById("deviceIdBox").innerText = getOrCreateDeviceId();
 getById("storeHeader").addEventListener("click", registerSecretAdminTap);
 document.addEventListener("keydown", (e) => {
@@ -1222,6 +1992,7 @@ updateStoreStatus();
 setInterval(updateStoreStatus, 5000);
 loadStockFromServer();
 setInterval(loadStockFromServer, 15000);
+loadSellPriceFromServer();
 loadOrders();
 setInterval(loadOrders, 5000);
 refreshTodayReport(false);

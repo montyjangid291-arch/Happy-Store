@@ -1,4 +1,9 @@
-const express = require("express");
+const mongoose = require("mongoose");
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.log(err));
+  const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
@@ -28,9 +33,58 @@ const defaultBuyPrice = {
   "Bingo Onion Chips": 0,
 };
 
+const defaultSellPrice = {
+  Maggi: 20,
+  Kurkure: 20,
+  Bhujia: 300,
+  Ariel: 160,
+  "Bhoot Chips": 20,
+  "Bingo Onion Chips": 20,
+};
+
+function getDefaultProductMap(fillValue) {
+  return {
+    Maggi: fillValue,
+    Kurkure: fillValue,
+    Bhujia: fillValue,
+    Ariel: fillValue,
+    "Bhoot Chips": fillValue,
+    "Bingo Onion Chips": fillValue,
+  };
+}
+
+const defaultDistributorStock = {
+  "104": getDefaultProductMap(0),
+  "407": getDefaultProductMap(0),
+  "607": getDefaultProductMap(0),
+};
+
+function normalizeDistributorStock(raw) {
+  const result = {
+    "104": getDefaultProductMap(0),
+    "407": getDefaultProductMap(0),
+    "607": getDefaultProductMap(0),
+  };
+  if (!raw || typeof raw !== "object") return result;
+  ["104", "407", "607"].forEach((room) => {
+    const source = raw[room];
+    if (!source || typeof source !== "object") return;
+    Object.keys(result[room]).forEach((name) => {
+      result[room][name] = Number(source[name]) || 0;
+    });
+  });
+  return result;
+}
+
 function loadData() {
   if (!fs.existsSync(DATA_FILE)) {
-    return { storeStock: defaultStock, orders: [], buyPrice: defaultBuyPrice };
+    return {
+      storeStock: defaultStock,
+      orders: [],
+      buyPrice: defaultBuyPrice,
+      sellPrice: defaultSellPrice,
+      distributorStock: defaultDistributorStock,
+    };
   }
 
   try {
@@ -40,25 +94,34 @@ function loadData() {
       storeStock: parsed.storeStock || defaultStock,
       orders: Array.isArray(parsed.orders) ? parsed.orders : [],
       buyPrice: parsed.buyPrice || defaultBuyPrice,
+      sellPrice: parsed.sellPrice || defaultSellPrice,
+      distributorStock: normalizeDistributorStock(parsed.distributorStock),
     };
   } catch (error) {
     console.error("Failed to parse store-data.json, using defaults", error);
-    return { storeStock: defaultStock, orders: [], buyPrice: defaultBuyPrice };
+    return {
+      storeStock: defaultStock,
+      orders: [],
+      buyPrice: defaultBuyPrice,
+      sellPrice: defaultSellPrice,
+      distributorStock: defaultDistributorStock,
+    };
   }
 }
 
 function saveData() {
   fs.writeFileSync(
     DATA_FILE,
-    JSON.stringify({ storeStock, orders, buyPrice }, null, 2),
+    JSON.stringify({ storeStock, orders, buyPrice, sellPrice, distributorStock }, null, 2),
     "utf8"
   );
 }
 
-let { storeStock, orders, buyPrice } = loadData();
+let { storeStock, orders, buyPrice, sellPrice, distributorStock } = loadData();
 
 let storeClosed = false;
 const RESET_CUSTOMER_PASSWORD = process.env.RESET_CUSTOMER_PASSWORD || "291";
+const PRICE_UPDATE_PASSWORD = process.env.PRICE_UPDATE_PASSWORD || "291";
 
 function formatLocalDate(date) {
   const y = date.getFullYear();
@@ -89,6 +152,60 @@ function isOrderExcludedFromCustomerStats(order) {
   return order && order.excludeFromCustomerStats === true;
 }
 
+function normalizePricePayload(body) {
+  if (!body || typeof body !== "object") return null;
+  if (body.prices && typeof body.prices === "object") return body.prices;
+  return body;
+}
+
+function calculateOrderProfit(order) {
+  if (!order || !Array.isArray(order.items)) return 0;
+  let profit = 0;
+  order.items.forEach((item) => {
+    const qty = Number(item.qty) || 0;
+    const sellAtOrder = Number(
+      item.sellPriceAtOrder !== undefined ? item.sellPriceAtOrder : item.price
+    ) || 0;
+    const buyAtOrder = Number(
+      item.buyPriceAtOrder !== undefined ? item.buyPriceAtOrder : buyPrice[item.name]
+    ) || 0;
+    profit += (sellAtOrder - buyAtOrder) * qty;
+  });
+  return profit;
+}
+
+function getDistributorRoomByCustomerRoom(roomNoRaw) {
+  const roomNo = Number(roomNoRaw);
+  if (!Number.isFinite(roomNo)) return "607";
+  if (roomNo >= 0 && roomNo <= 299) return "104";
+  if (roomNo >= 300 && roomNo <= 599) return "407";
+  return "607";
+}
+
+function backfillLegacyOrderProfitData() {
+  let changed = false;
+  orders.forEach((order) => {
+    if (!order || !Array.isArray(order.items)) return;
+    order.items.forEach((item) => {
+      if (item.sellPriceAtOrder === undefined) {
+        item.sellPriceAtOrder = Number(item.price) || 0;
+        changed = true;
+      }
+      if (item.buyPriceAtOrder === undefined) {
+        item.buyPriceAtOrder = Number(buyPrice[item.name]) || 0;
+        changed = true;
+      }
+    });
+    if (!Number.isFinite(Number(order.profit))) {
+      order.profit = calculateOrderProfit(order);
+      changed = true;
+    }
+  });
+  if (changed) saveData();
+}
+
+backfillLegacyOrderProfitData();
+
 app.get("/stock", (req, res) => {
   res.json(storeStock);
 });
@@ -111,11 +228,31 @@ app.post("/order", (req, res) => {
     return res.status(400).json({ status: "error", message: "Invalid order" });
   }
 
+  let itemsSubTotal = 0;
+  const distributorRoom = getDistributorRoomByCustomerRoom(order.room);
+  if (!distributorStock[distributorRoom]) {
+    distributorStock[distributorRoom] = getDefaultProductMap(0);
+  }
   order.items.forEach((i) => {
+    const itemName = String(i.name || "").trim();
+    const qty = Number(i.qty) || 0;
+    const sellAtOrder = Number(sellPrice[itemName] !== undefined ? sellPrice[itemName] : i.price) || 0;
+    const buyAtOrder = Number(buyPrice[itemName]) || 0;
+    i.price = sellAtOrder;
+    i.qty = qty;
+    i.sellPriceAtOrder = sellAtOrder;
+    i.buyPriceAtOrder = buyAtOrder;
+    itemsSubTotal += sellAtOrder * qty;
     if (storeStock[i.name] !== undefined) {
       storeStock[i.name] -= i.qty;
     }
+    if (distributorStock[distributorRoom][i.name] === undefined) {
+      distributorStock[distributorRoom][i.name] = 0;
+    }
+    distributorStock[distributorRoom][i.name] -= i.qty;
   });
+  const deliveryCharge = Number(order.deliveryCharge) || 0;
+  order.total = itemsSubTotal + deliveryCharge;
 
   order.id = Date.now();
   order.time = new Date().toLocaleString();
@@ -125,6 +262,8 @@ app.post("/order", (req, res) => {
   if (!order.deliveryType) {
     order.deliveryType = order.mode === "pickup" ? "Self Pickup" : "Room Delivery";
   }
+  order.collectFromRoom = distributorRoom;
+  order.profit = calculateOrderProfit(order);
 
   const deliveryText =
     order.mode === "pickup"
@@ -158,10 +297,33 @@ app.get("/buy-price", (req, res) => {
 });
 
 app.post("/buy-price", (req, res) => {
-  if (!req.body || typeof req.body !== "object") {
+  const password = String(req.body?.password || "");
+  if (password !== PRICE_UPDATE_PASSWORD) {
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+  const nextBuy = normalizePricePayload(req.body);
+  if (!nextBuy || typeof nextBuy !== "object") {
     return res.status(400).json({ status: "error", message: "Invalid buy price data" });
   }
-  buyPrice = req.body;
+  buyPrice = nextBuy;
+  saveData();
+  res.json({ status: "saved" });
+});
+
+app.get("/sell-price", (req, res) => {
+  res.json(sellPrice);
+});
+
+app.post("/sell-price", (req, res) => {
+  const password = String(req.body?.password || "");
+  if (password !== PRICE_UPDATE_PASSWORD) {
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+  const nextSell = normalizePricePayload(req.body);
+  if (!nextSell || typeof nextSell !== "object") {
+    return res.status(400).json({ status: "error", message: "Invalid sell price data" });
+  }
+  sellPrice = nextSell;
   saveData();
   res.json({ status: "saved" });
 });
@@ -177,35 +339,56 @@ app.get("/today-report", (req, res) => {
   const items = {};
   let revenue = 0;
   let profit = 0;
+  const currentMonth = getMonthKey(new Date());
+  let monthRevenue = 0;
+  let monthProfit = 0;
 
-  todayOrders.forEach((order) => {
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const dt = getOrderDate(order);
+    if (!dt) return;
     const orderTotal = Number(order.total) || 0;
-    revenue += orderTotal;
+    const orderProfit = Number.isFinite(Number(order.profit))
+      ? Number(order.profit)
+      : calculateOrderProfit(order);
 
-    if (Array.isArray(order.items)) {
-      order.items.forEach((item) => {
-        const qty = Number(item.qty) || 0;
-        const sell = Number(item.price) || 0;
-        const buy = Number(buyPrice[item.name]) || 0;
-        items[item.name] = (items[item.name] || 0) + qty;
-        profit += (sell - buy) * qty;
-      });
+    if (formatLocalDate(dt) === todayKey) {
+      revenue += orderTotal;
+      profit += orderProfit;
+      if (Array.isArray(order.items)) {
+        order.items.forEach((item) => {
+          const qty = Number(item.qty) || 0;
+          items[item.name] = (items[item.name] || 0) + qty;
+        });
+      }
+    }
+
+    if (getMonthKey(dt) === currentMonth) {
+      monthRevenue += orderTotal;
+      monthProfit += orderProfit;
     }
   });
 
   res.json({
     date: todayKey,
+    month: currentMonth,
     ordersCount: todayOrders.length,
     items,
     revenue,
     profit,
+    monthRevenue,
+    monthProfit,
   });
 });
 
 app.post("/cancel-order", (req, res) => {
   const orderId = Number(req.body?.orderId);
+  const confirmOrderId = Number(req.body?.confirmOrderId);
   if (!orderId) {
     return res.status(400).json({ status: "error", message: "Invalid orderId" });
+  }
+  if (Number.isFinite(confirmOrderId) && confirmOrderId !== orderId) {
+    return res.status(400).json({ status: "error", message: "Order number mismatch" });
   }
 
   const order = orders.find((o) => Number(o.id) === orderId);
@@ -227,10 +410,18 @@ app.post("/cancel-order", (req, res) => {
   }
 
   if (Array.isArray(order.items)) {
+    const distributorRoom = String(order.collectFromRoom || getDistributorRoomByCustomerRoom(order.room));
+    if (!distributorStock[distributorRoom]) {
+      distributorStock[distributorRoom] = getDefaultProductMap(0);
+    }
     order.items.forEach((item) => {
       if (storeStock[item.name] !== undefined) {
         storeStock[item.name] += Number(item.qty) || 0;
       }
+      if (distributorStock[distributorRoom][item.name] === undefined) {
+        distributorStock[distributorRoom][item.name] = 0;
+      }
+      distributorStock[distributorRoom][item.name] += Number(item.qty) || 0;
     });
   }
 
@@ -268,10 +459,18 @@ app.post("/admin/order-status", (req, res) => {
   }
 
   if (Array.isArray(order.items)) {
+    const distributorRoom = String(order.collectFromRoom || getDistributorRoomByCustomerRoom(order.room));
+    if (!distributorStock[distributorRoom]) {
+      distributorStock[distributorRoom] = getDefaultProductMap(0);
+    }
     order.items.forEach((item) => {
       if (storeStock[item.name] !== undefined) {
         storeStock[item.name] += Number(item.qty) || 0;
       }
+      if (distributorStock[distributorRoom][item.name] === undefined) {
+        distributorStock[distributorRoom][item.name] = 0;
+      }
+      distributorStock[distributorRoom][item.name] += Number(item.qty) || 0;
     });
   }
 
@@ -387,6 +586,53 @@ app.post("/reset-customer-money", handleResetCustomerMoney);
 
 app.get("/orders", (req, res) => {
   res.json(orders);
+});
+
+app.get("/distributor-stock", (req, res) => {
+  res.json(normalizeDistributorStock(distributorStock));
+});
+
+app.post("/distributor-stock", (req, res) => {
+  if (!req.body || typeof req.body !== "object") {
+    return res.status(400).json({ status: "error", message: "Invalid distributor stock" });
+  }
+  distributorStock = normalizeDistributorStock(req.body);
+  saveData();
+  return res.json({ status: "saved", distributorStock });
+});
+
+app.get("/distributor-month-summary", (req, res) => {
+  const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
+    ? req.query.month
+    : getMonthKey(new Date());
+
+  const summary = {
+    "104": { ordersCount: 0, totalAmount: 0, items: getDefaultProductMap(0) },
+    "407": { ordersCount: 0, totalAmount: 0, items: getDefaultProductMap(0) },
+    "607": { ordersCount: 0, totalAmount: 0, items: getDefaultProductMap(0) },
+  };
+
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const dt = getOrderDate(order);
+    if (!dt || getMonthKey(dt) !== month) return;
+    const room = String(order.collectFromRoom || getDistributorRoomByCustomerRoom(order.room));
+    if (!summary[room]) return;
+
+    summary[room].ordersCount += 1;
+    summary[room].totalAmount += Number(order.total) || 0;
+
+    if (Array.isArray(order.items)) {
+      order.items.forEach((item) => {
+        const name = String(item.name || "").trim();
+        if (!name) return;
+        if (summary[room].items[name] === undefined) summary[room].items[name] = 0;
+        summary[room].items[name] += Number(item.qty) || 0;
+      });
+    }
+  });
+
+  res.json({ month, summary });
 });
 // =====store open/close status ===== 
 // get status 

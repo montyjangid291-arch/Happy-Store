@@ -1,0 +1,638 @@
+{
+  "storeStock": {
+    "Maggi": 24,
+    "Kurkure": 10,
+    "Bhujia": 7,
+    "Ariel": 0,
+    "Bhoot Chips": 44,
+    "Bingo Onion Chips": 23
+  },
+  "orders": [
+    {
+      "name": "cssx",
+      "room": "045",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "8888",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Bingo Onion Chips",
+          "price": 20,
+          "qty": 5,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 120,
+      "id": 1771776051029,
+      "time": "22/2/2026, 9:30:51 pm",
+      "createdAt": "2026-02-22T16:00:51.087Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-22T16:01:37.749Z",
+      "profit": 100
+    },
+    {
+      "name": "cssx",
+      "room": "045",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "8888",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Bingo Onion Chips",
+          "price": 20,
+          "qty": 5,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 120,
+      "id": 1771776248142,
+      "time": "22/2/2026, 9:34:08 pm",
+      "createdAt": "2026-02-22T16:04:08.142Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 100,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "monty",
+      "room": "605",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "8888",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Bhoot Chips",
+          "price": 20,
+          "qty": 5,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 120,
+      "id": 1771776511104,
+      "time": "22/2/2026, 9:38:31 pm",
+      "createdAt": "2026-02-22T16:08:31.104Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-22T16:09:16.680Z",
+      "profit": 100
+    },
+    {
+      "name": "monty",
+      "room": "605",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "23456789",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Bhoot Chips",
+          "price": 20,
+          "qty": 5,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 120,
+      "id": 1771776834502,
+      "time": "22/2/2026, 9:43:54 pm",
+      "createdAt": "2026-02-22T16:13:54.502Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 100,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "monty",
+      "room": "605",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "23456789",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 2,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 620,
+      "id": 1771777144940,
+      "time": "22/2/2026, 9:49:04 pm",
+      "createdAt": "2026-02-22T16:19:04.940Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-22T16:19:44.085Z",
+      "profit": 600
+    },
+    {
+      "name": "monty",
+      "room": "605",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "23456789",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 2,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 620,
+      "id": 1771777507634,
+      "time": "22/2/2026, 9:55:07 pm",
+      "createdAt": "2026-02-22T16:25:07.634Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-22T16:25:30.827Z",
+      "profit": 600
+    },
+    {
+      "name": "monty",
+      "room": "605",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "23456789",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 2,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 620,
+      "id": 1771777770396,
+      "time": "22/2/2026, 9:59:30 pm",
+      "createdAt": "2026-02-22T16:29:30.396Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 600,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "dev",
+      "room": "888",
+      "hostel": "Boys Hostel",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "payment": "UPI",
+      "utr": "23456789",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Ariel",
+          "price": 160,
+          "qty": 1,
+          "sellPriceAtOrder": 160,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 180,
+      "id": 1771777982796,
+      "time": "22/2/2026, 10:03:02 pm",
+      "createdAt": "2026-02-22T16:33:02.796Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 160,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "monti",
+      "room": "002",
+      "mode": "pickup",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "104",
+      "assignedWhatsappPhone": "917878141252",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Kurkure",
+          "price": 20,
+          "qty": 2,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 40,
+      "id": 1771941381760,
+      "time": "24/2/2026, 7:26:21 pm",
+      "createdAt": "2026-02-24T13:56:21.778Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 40,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "css",
+      "room": "300",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "407",
+      "assignedWhatsappPhone": "918099317347",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Kurkure",
+          "price": 20,
+          "qty": 2,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 60,
+      "id": 1771941446484,
+      "time": "24/2/2026, 7:27:26 pm",
+      "createdAt": "2026-02-24T13:57:26.484Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 40,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "rohit",
+      "room": "504",
+      "mode": "pickup",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "407",
+      "assignedWhatsappPhone": "918099317347",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Kurkure",
+          "price": 20,
+          "qty": 2,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 40,
+      "id": 1771941601943,
+      "time": "24/2/2026, 7:30:01 pm",
+      "createdAt": "2026-02-24T14:00:01.943Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 40,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "abhinav",
+      "room": "608",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Kurkure",
+          "price": 20,
+          "qty": 3,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        },
+        {
+          "name": "Maggi",
+          "price": 20,
+          "qty": 24,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 560,
+      "id": 1771941670037,
+      "time": "24/2/2026, 7:31:10 pm",
+      "createdAt": "2026-02-24T14:01:10.037Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-24T14:01:43.319Z",
+      "profit": 540
+    },
+    {
+      "name": "sd",
+      "room": "888",
+      "mode": "pickup",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Kurkure",
+          "price": 20,
+          "qty": 3,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 60,
+      "id": 1771951932993,
+      "time": "24/2/2026, 10:22:12 pm",
+      "createdAt": "2026-02-24T16:52:12.994Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-24T16:53:30.926Z",
+      "profit": 60
+    },
+    {
+      "name": "cssx",
+      "room": "605",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Kurkure",
+          "price": 20,
+          "qty": 3,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 80,
+      "id": 1771952463624,
+      "time": "24/2/2026, 10:31:03 pm",
+      "createdAt": "2026-02-24T17:01:03.624Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-24T17:01:41.582Z",
+      "profit": 60
+    },
+    {
+      "name": "monty",
+      "room": "444",
+      "mode": "delivery",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "407",
+      "assignedWhatsappPhone": "918099317347",
+      "deliveryCharge": 20,
+      "items": [
+        {
+          "name": "Kurkure",
+          "price": 20,
+          "qty": 1,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 40,
+      "id": 1772036253854,
+      "time": "25/2/2026, 9:47:33 pm",
+      "createdAt": "2026-02-25T16:17:34.092Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 20,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "dev",
+      "room": "605",
+      "mode": "pickup",
+      "paymentMode": "upi",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Bingo Onion Chips",
+          "price": 20,
+          "qty": 23,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 460,
+      "id": 1772039311818,
+      "time": "25/2/2026, 10:38:31 pm",
+      "createdAt": "2026-02-25T17:08:31.818Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-25T17:09:33.647Z",
+      "profit": 460
+    },
+    {
+      "name": "cssx",
+      "room": "045",
+      "mode": "pickup",
+      "paymentMode": "upi",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "104",
+      "assignedWhatsappPhone": "917878141252",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Bhoot Chips",
+          "price": 20,
+          "qty": 8,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 160,
+      "id": 1772039526589,
+      "time": "25/2/2026, 10:42:06 pm",
+      "createdAt": "2026-02-25T17:12:06.589Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-25T17:14:18.748Z",
+      "profit": 160
+    },
+    {
+      "name": "monty",
+      "room": "605",
+      "mode": "pickup",
+      "paymentMode": "upi",
+      "deliveryType": "Self Pickup",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 0,
+      "items": [
+        {
+          "name": "Bhoot Chips",
+          "price": 20,
+          "qty": 1,
+          "sellPriceAtOrder": 20,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 20,
+      "id": 1772271232275,
+      "time": "28/2/2026, 3:03:52 pm",
+      "createdAt": "2026-02-28T09:33:52.277Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 20,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "monty",
+      "room": "605",
+      "mode": "delivery",
+      "paymentMode": "cash",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 10,
+      "items": [
+        {
+          "name": "Ariel",
+          "price": 160,
+          "qty": 1,
+          "sellPriceAtOrder": 160,
+          "buyPriceAtOrder": 0
+        }
+      ],
+      "total": 170,
+      "id": 1772271471367,
+      "time": "28/2/2026, 3:07:51 pm",
+      "createdAt": "2026-02-28T09:37:51.367Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 160,
+      "excludeFromCustomerStats": true
+    },
+    {
+      "name": "monty",
+      "room": "444",
+      "mode": "delivery",
+      "paymentMode": "cash",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "407",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 10,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 1,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 310,
+      "id": 1772274878546,
+      "time": "28/2/2026, 4:04:38 pm",
+      "createdAt": "2026-02-28T10:34:38.546Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-28T10:35:28.226Z",
+      "profit": 100
+    },
+    {
+      "name": "monty",
+      "room": "222",
+      "mode": "delivery",
+      "paymentMode": "cash",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "104",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 10,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 1,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 310,
+      "id": 1772275809292,
+      "time": "28/2/2026, 4:20:09 pm",
+      "createdAt": "2026-02-28T10:50:09.292Z",
+      "status": "active",
+      "cancelledAt": null,
+      "profit": 100
+    },
+    {
+      "name": "dev",
+      "room": "605",
+      "mode": "delivery",
+      "paymentMode": "cash",
+      "deliveryType": "Room Delivery",
+      "collectFromRoom": "607",
+      "assignedWhatsappPhone": "919983729301",
+      "deliveryCharge": 10,
+      "items": [
+        {
+          "name": "Bhujia",
+          "price": 300,
+          "qty": 2,
+          "sellPriceAtOrder": 300,
+          "buyPriceAtOrder": 200
+        }
+      ],
+      "total": 610,
+      "id": 1772276120991,
+      "time": "28/2/2026, 4:25:20 pm",
+      "createdAt": "2026-02-28T10:55:20.991Z",
+      "status": "cancelled",
+      "cancelledAt": "2026-02-28T10:56:03.901Z",
+      "profit": 200
+    }
+  ],
+  "buyPrice": {
+    "Maggi": 0,
+    "Kurkure": 17,
+    "Bhujia": 200,
+    "Namkeen": 30.5,
+    "Bhoot Chips": 0,
+    "Onion Chips": 25,
+    "Unibic Chocolate Chip Cookies": 20
+  },
+  "sellPrice": {
+    "Maggi": 20,
+    "Kurkure": 20,
+    "Bhujia": 300,
+    "Namkeen": 50,
+    "Bhoot Chips": 20,
+    "Onion Chips": 30,
+    "Unibic Chocolate Chip Cookies": 30
+  },
+  "distributorStock": {
+    "104": {
+      "Maggi": 0,
+      "Kurkure": 0,
+      "Bhujia": -1,
+      "Ariel": 0,
+      "Bhoot Chips": 0,
+      "Bingo Onion Chips": 0
+    },
+    "407": {
+      "Maggi": 0,
+      "Kurkure": -1,
+      "Bhujia": 0,
+      "Ariel": 0,
+      "Bhoot Chips": 0,
+      "Bingo Onion Chips": 0
+    },
+    "607": {
+      "Maggi": 0,
+      "Kurkure": 0,
+      "Bhujia": 0,
+      "Ariel": -1,
+      "Bhoot Chips": -1,
+      "Bingo Onion Chips": 0
+    }
+  }
+}
