@@ -473,6 +473,7 @@ let realPrice = {
 const DEFAULT_WHATSAPP_PHONE = "9983729301";
 const STORE_UPI_ID = "monty291@ptyes";
 const STORE_UPI_NAME = "Monty Mart";
+const DEPLOYED_API_BASE = "https://happy-store-zxir.onrender.com";
 let cart = [];
 let stockData = {};
 let storeClosed = false;
@@ -548,11 +549,19 @@ function getApiCandidates() {
   const list = [];
   const origin = window.location.origin;
   const host = window.location.hostname || "localhost";
-  // Prefer local backend first in development.
-  list.push(`http://localhost:5000`);
-  list.push(`http://${host}:5000`);
-  if (origin && origin.startsWith("http")) list.push(origin);
-  list.push("https://monty-mart.onrender.com");
+  const isRenderHosted = /onrender\.com$/i.test(host);
+
+  if (isRenderHosted) {
+    // On deployed site always prefer deployed backend, not local laptop server.
+    if (origin && origin.startsWith("http")) list.push(origin);
+    list.push(DEPLOYED_API_BASE);
+  } else {
+    // Local development preference.
+    list.push("http://localhost:5000");
+    list.push(`http://${host}:5000`);
+    if (origin && origin.startsWith("http")) list.push(origin);
+    list.push(DEPLOYED_API_BASE);
+  }
 
   // Deduplicate while preserving order
   return [...new Set(list)];
