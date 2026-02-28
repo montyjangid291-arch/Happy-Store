@@ -632,6 +632,27 @@ app.get("/customers-report", (req, res) => {
   });
 });
 
+app.get("/customers-lifetime", (req, res) => {
+  const spendMap = {};
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const key = `${String(order.name || "").trim()}|${String(order.room || "").trim()}`;
+    if (!spendMap[key]) {
+      spendMap[key] = {
+        name: String(order.name || "").trim() || "Unknown",
+        room: String(order.room || "").trim() || "-",
+        totalSpent: 0,
+        ordersCount: 0,
+      };
+    }
+    spendMap[key].totalSpent += Number(order.total) || 0;
+    spendMap[key].ordersCount += 1;
+  });
+
+  const customers = Object.values(spendMap).sort((a, b) => b.totalSpent - a.totalSpent);
+  res.json({ totalCustomers: customers.length, customers });
+});
+
 function handleResetCustomerMoney(req, res) {
   const password = String(req.body?.password || "");
   if (password !== RESET_CUSTOMER_PASSWORD) {

@@ -418,6 +418,9 @@ input:focus, select:focus {
     <button onclick="loadAdminCustomersReport()">Load Customer Spending</button>
     <button onclick="resetCustomerMoney()" style="background:#d9534f;color:#fff;">Reset Customer Money</button>
     <div id="adminCustomersReport" style="margin-top:10px;"></div>
+    <h3>All-Time Customer Spending (Never Reset)</h3>
+    <button onclick="loadLifetimeCustomersReport()">Load Lifetime Spending</button>
+    <div id="lifetimeCustomersReport" style="margin-top:10px;"></div>
 
     <h3>Purchase/Sell Price (Profit)</h3>
     <div class="priceGrid">
@@ -1435,6 +1438,7 @@ function showAdmin() {
   loadSellPriceFromServer();
   refreshTodayReport(false);
   loadAdminCustomersReport();
+  loadLifetimeCustomersReport();
 }
 
 async function saveStock() {
@@ -1976,6 +1980,7 @@ async function resetCustomerMoney() {
     alert(`Customer money reset done for ${data.month}. Affected orders: ${data.affected}`);
     loadTopCustomers();
     loadAdminCustomersReport();
+    loadLifetimeCustomersReport();
   } catch (err) {
     console.error(err);
     const msg = String(err.message || "Unknown error");
@@ -2024,6 +2029,38 @@ async function resetProfitTotals() {
       return;
     }
     alert(`Could not reset profit: ${msg}`);
+  }
+}
+
+async function loadLifetimeCustomersReport() {
+  try {
+    const res = await apiFetch(`/customers-lifetime?nocache=${Date.now()}`);
+    if (!res.ok) throw new Error("lifetime customers fetch failed");
+    const data = await res.json();
+    const allCustomers = Array.isArray(data.customers) ? data.customers : [];
+    const customers = allCustomers.slice(0, 200);
+    if (customers.length === 0) {
+      getById("lifetimeCustomersReport").innerHTML = "<div>No lifetime customer data found yet</div>";
+      return;
+    }
+    let html = `<div><b>Total Customers (All Time):</b> ${Number(data.totalCustomers) || allCustomers.length}</div>`;
+    html += `<div><b>Showing:</b> ${customers.length} (max 200)</div>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;">
+<tr><th style="border:1px solid #ccc;padding:6px;">#</th><th style="border:1px solid #ccc;padding:6px;">Name</th><th style="border:1px solid #ccc;padding:6px;">Room</th><th style="border:1px solid #ccc;padding:6px;">Orders</th><th style="border:1px solid #ccc;padding:6px;">Total</th></tr>`;
+    customers.forEach((c, idx) => {
+      html += `<tr>
+<td style="border:1px solid #ccc;padding:6px;">${idx + 1}</td>
+<td style="border:1px solid #ccc;padding:6px;">${c.name}</td>
+<td style="border:1px solid #ccc;padding:6px;">${c.room}</td>
+<td style="border:1px solid #ccc;padding:6px;">${c.ordersCount}</td>
+<td style="border:1px solid #ccc;padding:6px;">Rs ${c.totalSpent}</td>
+</tr>`;
+    });
+    html += "</table>";
+    getById("lifetimeCustomersReport").innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    getById("lifetimeCustomersReport").innerHTML = "<div>Could not load lifetime customer report</div>";
   }
 }
 
