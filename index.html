@@ -365,7 +365,7 @@ input:focus, select:focus {
   <div class="qrPaymentBox">
     <h4>Scan & Pay</h4>
     <img src="payment-qr.png" alt="Monty Mart QR Payment">
-    <div class="qrPaymentHint">UPI ID: monty291@ptyes </div>
+    <div class="qrPaymentHint">UPI ID: 9983729301@upi </div>
     <div class="qrPaymentHint">Mobile: 9983729301</div>
   </div>
   <div id="cancelOrderWrap" style="margin-top:8px;display:none;">
@@ -488,7 +488,7 @@ let realPrice = {
 };
 
 const DEFAULT_WHATSAPP_PHONE = "9983729301";
-const STORE_UPI_ID = "monty291@ptyes";
+const STORE_UPI_ID = "9983729301@upi";
 const STORE_UPI_NAME = "Monty Mart";
 const DEPLOYED_API_BASE = "https://happy-store-zxir.onrender.com";
 let cart = [];
@@ -1362,8 +1362,30 @@ function normalizeWhatsAppPhone(raw) {
 
 function buildUpiPaymentUrl(total, orderNo, customerName, roomNo) {
   const amount = Number(total || 0).toFixed(2);
+  const txnRef = `MM${Date.now()}${Math.floor(Math.random() * 1000)}`;
   const txnNote = `Monty Mart Order ${orderNo} - ${customerName} (Room ${roomNo})`;
-  return `upi://pay?pa=${encodeURIComponent(STORE_UPI_ID)}&pn=${encodeURIComponent(STORE_UPI_NAME)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
+  return `upi://pay?pa=${encodeURIComponent(STORE_UPI_ID)}&pn=${encodeURIComponent(STORE_UPI_NAME)}&tr=${encodeURIComponent(txnRef)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
+}
+
+function openExternalUrl(url, openInNewTab) {
+  const target = openInNewTab ? "_blank" : "_self";
+  if (!openInNewTab) {
+    try {
+      window.location.assign(url);
+      return true;
+    } catch (_e) {}
+  }
+  let opened = null;
+  try {
+    opened = window.open(url, target);
+  } catch (_e) {}
+  if (opened) return true;
+  try {
+    window.location.href = url;
+    return true;
+  } catch (_e) {
+    return false;
+  }
 }
 
 function getOrderRoutingByRoom(roomNo) {
@@ -1486,7 +1508,7 @@ async function placeOrder() {
     total
   };
 
-  const waUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}`;
+  const waUrl = `https://api.whatsapp.com/send?phone=${whatsappPhone}&text=${encodeURIComponent(msg)}`;
   const upiUrl = buildUpiPaymentUrl(total, orderCounter, name, room);
   const quickBillDataUrl = buildTextBillDataUrl(msg);
   const quickBillName = `bill-${orderCounter}.png`;
@@ -1496,28 +1518,22 @@ async function placeOrder() {
 
   if (paymentMode === "upi") {
     setPaymentManualLink(upiUrl);
-    // Open payment app first for UPI payments.
-    const reservedPayWindow = window.open(upiUrl, "_blank");
-    if (!reservedPayWindow) {
-      setPaymentManualLink(upiUrl);
-    }
+    // Open payment app first for UPI payments (fallback to same-tab redirect if popup blocked).
+    const payOpened = openExternalUrl(upiUrl, false);
+    if (!payOpened) setPaymentManualLink(upiUrl);
     setWhatsAppManualLink(waUrl);
     const sendNow = confirm("Payment complete ho gaya ho to OK dabao. Uske baad WhatsApp message open hoga.");
     if (sendNow) {
-      const waWindowAfterPay = window.open(waUrl, "_blank");
-      if (!waWindowAfterPay) {
-        setWhatsAppManualLink(waUrl);
-      }
+      const waOpened = openExternalUrl(waUrl, false);
+      if (!waOpened) setWhatsAppManualLink(waUrl);
     } else {
       alert("Payment complete hone ke baad 'Tap to open WhatsApp message' se message bhej dena.");
     }
   } else {
     // Cash mode: only WhatsApp message flow.
     setWhatsAppManualLink(waUrl);
-    const reservedWaWindow = window.open(waUrl, "_blank");
-    if (!reservedWaWindow) {
-      setWhatsAppManualLink(waUrl);
-    }
+    const waOpened = openExternalUrl(waUrl, false);
+    if (!waOpened) setWhatsAppManualLink(waUrl);
   }
 
   try {
