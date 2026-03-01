@@ -439,6 +439,21 @@ function calculateOrderProfit(order) {
   return profit;
 }
 
+function recalculateOrderTotals(order) {
+  if (!order || !Array.isArray(order.items)) return;
+  let itemsSubTotal = 0;
+  order.items.forEach((item) => {
+    const qty = Number(item.qty) || 0;
+    const sellAtOrder = Number(
+      item.sellPriceAtOrder !== undefined ? item.sellPriceAtOrder : item.price
+    ) || 0;
+    itemsSubTotal += sellAtOrder * qty;
+  });
+  const deliveryCharge = Number(order.deliveryCharge) || 0;
+  order.total = itemsSubTotal + (order.items.length ? deliveryCharge : 0);
+  order.profit = calculateOrderProfit(order);
+}
+
 function getDistributorRoomByCustomerRoom(roomNoRaw) {
   const roomNo = Number(roomNoRaw);
   if (!Number.isFinite(roomNo)) return "607";
@@ -779,6 +794,84 @@ app.post("/admin/order-status", (req, res) => {
   order.cancelledAt = new Date().toISOString();
   saveData();
   return res.json({ status: "cancelled", orderId });
+});
+
+app.post("/admin/adjust-order", (req, res) => {
+  const orderId = Number(req.body?.orderId);
+  const adjustedItems = req.body?.items;
+
+  if (!orderId || !adjustedItems || typeof adjustedItems !== "object") {
+    return res.status(400).json({ status: "error", message: "Invalid orderId/items" });
+  }
+
+  const order = orders.find((o) => Number(o.id) === orderId);
+  if (!order) {
+    return res.status(404).json({ status: "not_found" });
+  }
+  if (order.status === "cancelled") {
+    return res.status(400).json({ status: "error", message: "Order already cancelled" });
+  }
+  if (!Array.isArray(order.items) || order.items.length === 0) {
+    return res.status(400).json({ status: "error", message: "Order has no items" });
+  }
+
+  const distributorRoom = String(order.collectFromRoom || getDistributorRoomByCustomerRoom(order.room));
+  if (!distributorStock[distributorRoom]) {
+    distributorStock[distributorRoom] = getDefaultProductMap(0);
+  }
+
+  let changed = false;
+  const nextItems = [];
+
+  order.items.forEach((item) => {
+    const name = String(item.name || "").trim();
+    const currentQty = Math.max(0, Number(item.qty) || 0);
+    const incomingQty = Number(adjustedItems[name]);
+    const newQty = Number.isFinite(incomingQty)
+      ? Math.max(0, Math.min(currentQty, Math.floor(incomingQty)))
+      : currentQty;
+    const reduceBy = currentQty - newQty;
+
+    if (reduceBy > 0) {
+      changed = true;
+      if (storeStock[name] !== undefined) {
+        storeStock[name] += reduceBy;
+      }
+      if (distributorStock[distributorRoom][name] === undefined) {
+        distributorStock[distributorRoom][name] = 0;
+      }
+      distributorStock[distributorRoom][name] += reduceBy;
+    }
+
+    if (newQty > 0) {
+      item.qty = newQty;
+      nextItems.push(item);
+    }
+  });
+
+  if (!changed) {
+    return res.json({ status: "unchanged", orderId, total: Number(order.total) || 0, items: order.items });
+  }
+
+  order.items = nextItems;
+  if (order.items.length === 0) {
+    order.status = "cancelled";
+    order.cancelledAt = new Date().toISOString();
+    order.total = 0;
+    order.profit = 0;
+  } else {
+    order.status = "partially_adjusted";
+    recalculateOrderTotals(order);
+  }
+
+  order.adjustedAt = new Date().toISOString();
+  saveData();
+  return res.json({
+    status: order.status,
+    orderId,
+    total: Number(order.total) || 0,
+    items: order.items,
+  });
 });
 
 app.post("/accept-order", (req, res) => {

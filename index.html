@@ -497,6 +497,7 @@ let storeClosed = false;
 let orderCounter = parseInt(localStorage.getItem("orderNo") || "1001", 10);
 let lastSeenOrderId = null;
 let lastSeenOrderCount = 0;
+let latestOrdersCache = [];
 let ACTIVE_API_BASE = null;
 const LIVE_ORDERS_PER_FLOOR_LIMIT = 2000;
 
@@ -1790,6 +1791,7 @@ async function loadOrders() {
     if (!res.ok) throw new Error("orders fetch failed");
     const orders = await res.json();
     const allOrders = Array.isArray(orders) ? orders : [];
+    latestOrdersCache = allOrders;
 
     const newestOrder = allOrders.length ? allOrders[allOrders.length - 1] : null;
     const newestOrderId = newestOrder ? Number(newestOrder.id || 0) : 0;
@@ -1804,8 +1806,18 @@ async function loadOrders() {
     lastSeenOrderCount = allOrders.length;
 
     function orderCardHtml(o) {
-      const orderStatus = o.status === "cancelled" ? "Cancelled" : (o.status === "accepted" ? "Accepted" : "Active");
-      const statusColor = o.status === "cancelled" ? "#d9534f" : (o.status === "accepted" ? "#0d6efd" : "#198754");
+      const orderStatus =
+        o.status === "cancelled"
+          ? "Cancelled"
+          : (o.status === "accepted"
+              ? "Accepted"
+              : (o.status === "partially_adjusted" ? "Partially Adjusted" : "Active"));
+      const statusColor =
+        o.status === "cancelled"
+          ? "#d9534f"
+          : (o.status === "accepted"
+              ? "#0d6efd"
+              : (o.status === "partially_adjusted" ? "#ff9800" : "#198754"));
       const orderId = Number(o && o.id) || 0;
       const items = Array.isArray(o.items) ? o.items : [];
       const itemRows = items.map((i) => {
@@ -1828,6 +1840,7 @@ ${itemRows || "No items"}<br>
 Items Total: Rs ${itemsTotal}<br>
 Delivery: Rs ${deliveryCharge}<br>
 Grand Total: Rs ${grandTotal}<br>
+${(o.status !== "cancelled" && orderId > 0) ? `<button class="btn" style="background:#ff9800;padding:6px 10px;margin-top:6px;" onclick="adminAdjustOrderPrompt(${orderId})">Adjust Qty</button><br>` : ""}
 ${(o.status !== "cancelled" && orderId > 0) ? `<button class="btn" style="background:#ff3b3b;padding:6px 10px;margin-top:6px;" onclick="adminQuickCancelOrder(${orderId})">Quick Cancel</button><br>` : ""}
 <small>${o.time}</small>
 </div>
@@ -1949,10 +1962,10 @@ async function adminQuickCancelOrder(orderIdArg) {
   const ok = confirm(`Admin quick cancel: Order #${orderId}?`);
   if (!ok) return;
   try {
-    const res = await apiFetch("/cancel-order", {
+    const res = await apiFetch("/admin/order-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, confirmOrderId: orderId })
+      body: JSON.stringify({ orderId, action: "cancel" })
     });
     const data = await safeJson(res);
     if (!res.ok || data.status !== "cancelled") {
@@ -1971,6 +1984,75 @@ async function adminQuickCancelOrder(orderIdArg) {
   } catch (err) {
     console.error(err);
     alert(`Admin cancel failed: ${err.message || "Unknown error"}`);
+  }
+}
+
+async function adminAdjustOrderPrompt(orderIdArg) {
+  const orderId = Number(orderIdArg || 0);
+  if (!orderId) {
+    alert("Invalid order id");
+    return;
+  }
+  const order = (Array.isArray(latestOrdersCache) ? latestOrdersCache : []).find((o) => Number(o.id) === orderId);
+  if (!order || !Array.isArray(order.items) || !order.items.length) {
+    alert("Order items not found. Refreshing orders.");
+    loadOrders();
+    return;
+  }
+  if (String(order.status || "").toLowerCase() === "cancelled") {
+    alert("Cancelled order cannot be adjusted.");
+    return;
+  }
+
+  const nextItems = {};
+  for (const item of order.items) {
+    const name = String(item.name || "").trim();
+    const currentQty = Math.max(0, Number(item.qty) || 0);
+    const input = prompt(
+      `Order #${orderId}\n${name} current qty: ${currentQty}\nEnter new qty (0-${currentQty})`,
+      String(currentQty)
+    );
+    if (input === null) return;
+    const parsed = Number(input);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > currentQty) {
+      alert(`Invalid qty for ${name}. Enter 0 to ${currentQty}.`);
+      return;
+    }
+    nextItems[name] = Math.floor(parsed);
+  }
+
+  try {
+    const res = await apiFetch("/admin/adjust-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, items: nextItems })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || !["partially_adjusted", "cancelled", "unchanged"].includes(String(data.status || ""))) {
+      throw new Error(data.message || data.status || "Adjust failed");
+    }
+
+    if (data.status === "cancelled") {
+      removeRecentCancelableOrder(orderId);
+      showCancelOrderUI();
+      alert(`Order #${orderId} fully cancelled by adjustment.`);
+    } else if (data.status === "unchanged") {
+      alert(`Order #${orderId} unchanged.`);
+    } else {
+      alert(`Order #${orderId} adjusted successfully. New total: Rs ${Number(data.total) || 0}`);
+    }
+
+    loadOrders();
+    loadStockFromServer();
+    refreshTodayReport(false);
+    loadTopCustomers();
+    if (getById("adminPanel").style.display === "block") {
+      loadAdminCustomersReport();
+      loadLifetimeCustomersReport();
+    }
+  } catch (err) {
+    console.error(err);
+    alert(`Adjust failed: ${err.message || "Unknown error"}`);
   }
 }
 
