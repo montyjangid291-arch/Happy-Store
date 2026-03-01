@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
+const webpush = require("web-push");
 
 const app = express();
 app.use(cors());
@@ -77,6 +78,7 @@ const StoreStateSchema = new mongoose.Schema(
     singletonKey: { type: String, required: true, unique: true, default: "main" },
     storeStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultStock }) },
     orders: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    pushSubscriptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     buyPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultBuyPrice }) },
     sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
     distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
@@ -89,6 +91,7 @@ const StoreState = mongoose.model("StoreState", StoreStateSchema);
 
 let storeStock = { ...defaultStock };
 let orders = [];
+let pushSubscriptions = [];
 let buyPrice = { ...defaultBuyPrice };
 let sellPrice = { ...defaultSellPrice };
 let distributorStock = normalizeDistributorStock(defaultDistributorStock);
@@ -114,6 +117,7 @@ function saveData() {
       singletonKey: "main",
       storeStock,
       orders,
+      pushSubscriptions,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -132,6 +136,7 @@ async function loadStateFromMongo() {
       singletonKey: "main",
       storeStock,
       orders,
+      pushSubscriptions,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -142,6 +147,7 @@ async function loadStateFromMongo() {
 
   storeStock = mergeProductMap(defaultStock, doc.storeStock, 0);
   orders = Array.isArray(doc.orders) ? doc.orders : [];
+  pushSubscriptions = normalizePushSubscriptions(doc.pushSubscriptions);
   buyPrice = mergeProductMap(defaultBuyPrice, doc.buyPrice, 0);
   sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
   distributorStock = normalizeDistributorStock(doc.distributorStock);
@@ -174,6 +180,108 @@ app.use(async (req, res, next) => {
 const RESET_CUSTOMER_PASSWORD = process.env.RESET_CUSTOMER_PASSWORD || "291";
 const PRICE_UPDATE_PASSWORD = process.env.PRICE_UPDATE_PASSWORD || "291";
 const RESET_PROFIT_PASSWORD = process.env.RESET_PROFIT_PASSWORD || "291";
+const WEB_PUSH_PUBLIC_KEY = String(
+  process.env.WEB_PUSH_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || ""
+).trim();
+const WEB_PUSH_PRIVATE_KEY = String(
+  process.env.WEB_PUSH_PRIVATE_KEY || process.env.VAPID_PRIVATE_KEY || ""
+).trim();
+const WEB_PUSH_CONTACT = String(
+  process.env.WEB_PUSH_CONTACT || "mailto:admin@montymart.local"
+).trim();
+
+let webPushEnabled = false;
+if (WEB_PUSH_PUBLIC_KEY && WEB_PUSH_PRIVATE_KEY) {
+  webpush.setVapidDetails(WEB_PUSH_CONTACT, WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY);
+  webPushEnabled = true;
+} else {
+  console.warn("Web push disabled: WEB_PUSH_PUBLIC_KEY / WEB_PUSH_PRIVATE_KEY missing.");
+}
+
+function normalizePushSubscriptions(raw) {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set();
+  const out = [];
+  raw.forEach((entry) => {
+    const endpoint = String(entry?.endpoint || "").trim();
+    const keys = entry?.keys && typeof entry.keys === "object" ? entry.keys : {};
+    const p256dh = String(keys.p256dh || "").trim();
+    const auth = String(keys.auth || "").trim();
+    if (!endpoint || !p256dh || !auth) return;
+    if (seen.has(endpoint)) return;
+    seen.add(endpoint);
+    out.push({
+      endpoint,
+      keys: { p256dh, auth },
+      createdAt: entry?.createdAt || new Date().toISOString(),
+      userAgent: String(entry?.userAgent || "").slice(0, 400),
+      deviceId: String(entry?.deviceId || "").slice(0, 100),
+    });
+  });
+  return out;
+}
+
+function upsertPushSubscription(subscription, meta = {}) {
+  const normalizedList = normalizePushSubscriptions([subscription]);
+  if (!normalizedList.length) return false;
+  const incoming = normalizedList[0];
+  incoming.userAgent = String(meta.userAgent || incoming.userAgent || "").slice(0, 400);
+  incoming.deviceId = String(meta.deviceId || incoming.deviceId || "").slice(0, 100);
+
+  const index = pushSubscriptions.findIndex((s) => s.endpoint === incoming.endpoint);
+  if (index >= 0) {
+    pushSubscriptions[index] = { ...pushSubscriptions[index], ...incoming };
+  } else {
+    pushSubscriptions.push(incoming);
+  }
+  saveData();
+  return true;
+}
+
+function removePushSubscriptionByEndpoint(endpointRaw) {
+  const endpoint = String(endpointRaw || "").trim();
+  if (!endpoint) return false;
+  const before = pushSubscriptions.length;
+  pushSubscriptions = pushSubscriptions.filter((s) => String(s.endpoint || "").trim() !== endpoint);
+  if (pushSubscriptions.length !== before) {
+    saveData();
+    return true;
+  }
+  return false;
+}
+
+async function sendOrderPushNotification(order) {
+  if (!webPushEnabled || !pushSubscriptions.length) return;
+
+  const payload = JSON.stringify({
+    title: "New Monty Mart Order",
+    body: `${String(order?.name || "Customer")} (Room ${String(order?.room || "-")}) - Rs ${Number(order?.total) || 0}`,
+    orderId: Number(order?.id) || 0,
+    url: "/",
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+  });
+
+  const failedEndpoints = [];
+  await Promise.all(
+    pushSubscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification(sub, payload);
+      } catch (err) {
+        const statusCode = Number(err?.statusCode) || 0;
+        if (statusCode === 404 || statusCode === 410) {
+          failedEndpoints.push(sub.endpoint);
+        }
+      }
+    })
+  );
+
+  if (failedEndpoints.length) {
+    const stale = new Set(failedEndpoints);
+    pushSubscriptions = pushSubscriptions.filter((s) => !stale.has(s.endpoint));
+    saveData();
+  }
+}
 
 function formatLocalDate(date) {
   const y = date.getFullYear();
@@ -266,6 +374,37 @@ app.get("/stock", (req, res) => {
   res.json(storeStock);
 });
 
+app.get("/push/public-key", (req, res) => {
+  if (!webPushEnabled) {
+    return res.status(503).json({ status: "disabled", message: "Push notifications are not configured." });
+  }
+  return res.json({ status: "ok", publicKey: WEB_PUSH_PUBLIC_KEY });
+});
+
+app.post("/push/subscribe", (req, res) => {
+  if (!webPushEnabled) {
+    return res.status(503).json({ status: "disabled", message: "Push notifications are not configured." });
+  }
+  const subscription = req.body?.subscription || req.body;
+  const saved = upsertPushSubscription(subscription, {
+    userAgent: req.headers["user-agent"] || "",
+    deviceId: req.body?.deviceId || "",
+  });
+  if (!saved) {
+    return res.status(400).json({ status: "error", message: "Invalid push subscription payload." });
+  }
+  return res.json({ status: "subscribed" });
+});
+
+app.post("/push/unsubscribe", (req, res) => {
+  const endpoint = req.body?.endpoint;
+  if (!endpoint) {
+    return res.status(400).json({ status: "error", message: "Endpoint is required." });
+  }
+  removePushSubscriptionByEndpoint(endpoint);
+  return res.json({ status: "unsubscribed" });
+});
+
 app.post("/stock", (req, res) => {
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({ status: "error", message: "Invalid stock" });
@@ -277,7 +416,7 @@ app.post("/stock", (req, res) => {
   res.json({ status: "saved" });
 });
 
-app.post("/order", (req, res) => {
+app.post("/order", async (req, res) => {
   const order = req.body;
 
   if (!order || !Array.isArray(order.items)) {
@@ -344,6 +483,10 @@ app.post("/order", (req, res) => {
   console.log("TOTAL: ₹" + order.total);
   console.log("Time:", order.time);
   console.log("=======================\n");
+
+  sendOrderPushNotification(order).catch((err) => {
+    console.error("Push send failed:", err?.message || err);
+  });
 
   res.json({ status: "ok", orderId: order.id, cancelWindowMs: 120000 });
 });
