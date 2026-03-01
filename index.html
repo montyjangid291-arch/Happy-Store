@@ -386,7 +386,7 @@ input:focus, select:focus {
 </div>
 
 <div style="text-align:center; margin-top:30px;">
-  <button id="adminBtn" onclick="showAdmin()">Admin Login</button>
+  <button id="adminBtn" onclick="showAdmin()" style="display:none;">Admin</button>
 
   <div id="adminPanel">
     <h3>Admin</h3>
@@ -506,7 +506,6 @@ const SOUND_ENABLED_KEY = "mm_sound_enabled";
 const ALERT_ALLOWED_EXTRA_KEY = "mm_alert_allowed_extra_ids";
 const PUSH_SUBSCRIBED_KEY = "mm_push_subscribed";
 const PUSH_ENDPOINT_KEY = "mm_push_endpoint";
-const ADMIN_TOKEN_KEY = "mm_admin_token";
 // Replace these with your actual allowed device IDs (laptop + one mobile).
 const ORDER_ALERT_ALLOWED_DEVICE_IDS = [
   "MM-45SHVENV",
@@ -736,66 +735,6 @@ async function apiFetch(path, options) {
     }
   }
   throw lastError || new Error("API unreachable");
-}
-
-function getAdminToken() {
-  return String(localStorage.getItem(ADMIN_TOKEN_KEY) || "").trim();
-}
-
-function setAdminToken(token) {
-  const clean = String(token || "").trim();
-  if (!clean) {
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
-    return;
-  }
-  localStorage.setItem(ADMIN_TOKEN_KEY, clean);
-}
-
-async function adminApiFetch(path, options) {
-  const token = getAdminToken();
-  if (!token) {
-    throw new Error("Admin login required");
-  }
-  const next = { ...(options || {}) };
-  const headers = { ...(next.headers || {}) };
-  headers.Authorization = `Bearer ${token}`;
-  next.headers = headers;
-  const res = await apiFetch(path, next);
-  if (res.status === 401) {
-    setAdminToken("");
-    throw new Error("Admin session expired. Login again.");
-  }
-  return res;
-}
-
-async function ensureAdminSession() {
-  try {
-    const res = await adminApiFetch(`/admin/session?nocache=${Date.now()}`);
-    return res.ok;
-  } catch (_e) {
-    return false;
-  }
-}
-
-async function loginAdminWithPrompt() {
-  const entered = prompt("Enter admin password");
-  if (entered === null) return false;
-  const password = String(entered || "").trim();
-  if (!password) {
-    alert("Password required");
-    return false;
-  }
-  const res = await apiFetch("/admin/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password }),
-  });
-  const data = await safeJson(res);
-  if (!res.ok || data.status !== "ok" || !data.token) {
-    throw new Error(data.message || "Admin login failed");
-  }
-  setAdminToken(data.token);
-  return true;
 }
 
 async function safeJson(res) {
@@ -1231,7 +1170,7 @@ function renderDistributorLowStockFromData(data) {
 
 async function loadDistributorStock() {
   try {
-    const res = await adminApiFetch(`/distributor-stock?nocache=${Date.now()}`);
+    const res = await apiFetch(`/distributor-stock?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("distributor stock fetch failed");
     const data = await safeJson(res);
     writeDistributorStockCache(data || {});
@@ -1268,7 +1207,7 @@ function renderDistributorMonthSummary(data) {
 
 async function loadDistributorMonthSummary() {
   try {
-    const res = await adminApiFetch(`/distributor-month-summary?nocache=${Date.now()}`);
+    const res = await apiFetch(`/distributor-month-summary?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("distributor month summary fetch failed");
     const data = await safeJson(res);
     renderDistributorMonthSummary(data || {});
@@ -1277,7 +1216,7 @@ async function loadDistributorMonthSummary() {
     if (msg.includes("Route not found")) {
       // fallback from /orders
       try {
-        const res2 = await adminApiFetch(`/orders?nocache=${Date.now()}`);
+        const res2 = await apiFetch(`/orders?nocache=${Date.now()}`);
         if (!res2.ok) throw new Error("orders fallback failed");
         const orders = await safeJson(res2);
         const month = (() => {
@@ -1315,7 +1254,7 @@ async function loadDistributorMonthSummary() {
 async function saveDistributorStock() {
   try {
     const payload = getDistributorStockPayloadFromInputs();
-    const res = await adminApiFetch("/distributor-stock", {
+    const res = await apiFetch("/distributor-stock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -1619,16 +1558,12 @@ async function placeOrder() {
   // WhatsApp already attempted immediately above.
 }
 
-async function showAdmin() {
-  const hasValidSession = await ensureAdminSession();
-  if (!hasValidSession) {
-    try {
-      const ok = await loginAdminWithPrompt();
-      if (!ok) return;
-    } catch (err) {
-      alert(`Admin login failed: ${err.message || "Unknown error"}`);
-      return;
-    }
+function showAdmin() {
+  if (!localStorage.getItem("adminPass")) localStorage.setItem("adminPass", "291");
+  const entered = prompt("Admin password?");
+  if (entered !== localStorage.getItem("adminPass")) {
+    alert("Wrong password");
+    return;
   }
   getById("adminPanel").style.display = "block";
   loadBuyPriceFromServer();
@@ -1653,7 +1588,7 @@ async function saveStock() {
   updateStockDisplay();
 
   try {
-    const res = await adminApiFetch("/stock", {
+    const res = await apiFetch("/stock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(stockData)
@@ -1672,7 +1607,7 @@ async function toggleStore() {
     if (!readRes.ok) throw new Error("status read failed");
     const current = await readRes.json();
 
-    const writeRes = await adminApiFetch("/store-status", {
+    const writeRes = await apiFetch("/store-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ closed: !current.closed })
@@ -1768,7 +1703,7 @@ async function saveBuyPrice() {
     "Unibic Chocolate Chip Cookies": +getById("bUnibicCookies").value
   };
   try {
-    const res = await adminApiFetch("/buy-price", {
+    const res = await apiFetch("/buy-price", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: password.trim(), prices: buy })
@@ -1796,7 +1731,7 @@ async function saveSellPrice() {
     "Unibic Chocolate Chip Cookies": +getById("spUnibicCookies").value
   };
   try {
-    const res = await adminApiFetch("/sell-price", {
+    const res = await apiFetch("/sell-price", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: password.trim(), prices: sell })
@@ -1854,7 +1789,7 @@ async function refreshTodayReport(showPopup) {
 
 async function loadOrders() {
   try {
-    const res = await adminApiFetch(`/orders?nocache=${Date.now()}`);
+    const res = await apiFetch(`/orders?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("orders fetch failed");
     const orders = await res.json();
     const allOrders = Array.isArray(orders) ? orders : [];
@@ -2029,7 +1964,7 @@ async function adminQuickCancelOrder(orderIdArg) {
   const ok = confirm(`Admin quick cancel: Order #${orderId}?`);
   if (!ok) return;
   try {
-    const res = await adminApiFetch("/admin/order-status", {
+    const res = await apiFetch("/admin/order-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId, action: "cancel" })
@@ -2089,7 +2024,7 @@ async function adminAdjustOrderPrompt(orderIdArg) {
   }
 
   try {
-    const res = await adminApiFetch("/admin/adjust-order", {
+    const res = await apiFetch("/admin/adjust-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId, items: nextItems })
@@ -2162,7 +2097,7 @@ async function loadTopCustomers() {
   } catch (err) {
     console.warn("top-customers API failed, using orders fallback:", err);
     try {
-      const res2 = await adminApiFetch(`/orders?nocache=${Date.now()}`);
+      const res2 = await apiFetch(`/orders?nocache=${Date.now()}`);
       if (!res2.ok) throw new Error("orders fallback failed");
       const orders = await res2.json();
       const month = monthKey(new Date());
@@ -2253,7 +2188,7 @@ async function saveManualCustomerSpend() {
   }
 
   try {
-    const res = await adminApiFetch("/admin/customer-spend", {
+    const res = await apiFetch("/admin/customer-spend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -2292,7 +2227,7 @@ async function deleteManualCustomerSpend() {
   if (!confirm(`Delete manual entry for ${name} (Room ${room})?`)) return;
 
   try {
-    const res = await adminApiFetch("/admin/customer-spend/delete", {
+    const res = await apiFetch("/admin/customer-spend/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scope, name, room }),
@@ -2327,7 +2262,7 @@ async function resetCustomerMoney() {
       body: JSON.stringify({ password: pass.trim() })
     };
 
-    let res = await adminApiFetch("/admin/reset-customer-money", payload);
+    let res = await apiFetch("/admin/reset-customer-money", payload);
     let data = await safeJson(res);
 
     if (!res.ok || data.status !== "reset") {
@@ -2363,7 +2298,7 @@ async function resetProfitTotals() {
       body: JSON.stringify({ password: pass.trim() })
     };
 
-    let res = await adminApiFetch("/admin/reset-profit", payload);
+    let res = await apiFetch("/admin/reset-profit", payload);
     let data = await safeJson(res);
 
     if (!res.ok || data.status !== "reset") {
@@ -2425,8 +2360,7 @@ getById("roomNo").addEventListener("input", (e) => {
 getById("deviceIdBox").innerText = getOrCreateDeviceId();
 getById("storeHeader").addEventListener("click", registerSecretAdminTap);
 document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.altKey && String(e.key || "").toLowerCase() === "a") {
-    e.preventDefault();
+  if (e.ctrlKey && e.shiftKey && String(e.key || "").toLowerCase() === "a") {
     showAdmin();
   }
 });
@@ -2440,13 +2374,8 @@ setInterval(updateStoreStatus, 5000);
 loadStockFromServer();
 setInterval(loadStockFromServer, 15000);
 loadSellPriceFromServer();
-setInterval(async () => {
-  const panel = getById("adminPanel");
-  if (!panel || panel.style.display !== "block") return;
-  const ok = await ensureAdminSession();
-  if (!ok) return;
-  loadOrders();
-}, 5000);
+loadOrders();
+setInterval(loadOrders, 5000);
 refreshTodayReport(false);
 setInterval(() => refreshTodayReport(false), 15000);
 loadTopCustomers();
