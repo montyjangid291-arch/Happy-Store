@@ -128,6 +128,7 @@ const StoreStateSchema = new mongoose.Schema(
     orders: { type: [mongoose.Schema.Types.Mixed], default: [] },
     pushSubscriptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     manualCustomers: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultManualCustomers }) },
+    monthProfitAdjustments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
     buyPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultBuyPrice }) },
     sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
     distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
@@ -142,6 +143,7 @@ let storeStock = { ...defaultStock };
 let orders = [];
 let pushSubscriptions = [];
 let manualCustomers = normalizeManualCustomers(defaultManualCustomers);
+let monthProfitAdjustments = {};
 let buyPrice = { ...defaultBuyPrice };
 let sellPrice = { ...defaultSellPrice };
 let distributorStock = normalizeDistributorStock(defaultDistributorStock);
@@ -169,6 +171,7 @@ function saveData() {
       orders,
       pushSubscriptions,
       manualCustomers,
+      monthProfitAdjustments,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -189,6 +192,7 @@ async function loadStateFromMongo() {
       orders,
       pushSubscriptions,
       manualCustomers,
+      monthProfitAdjustments,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -201,6 +205,7 @@ async function loadStateFromMongo() {
   orders = Array.isArray(doc.orders) ? doc.orders : [];
   pushSubscriptions = normalizePushSubscriptions(doc.pushSubscriptions);
   manualCustomers = normalizeManualCustomers(doc.manualCustomers);
+  monthProfitAdjustments = normalizeMonthProfitAdjustments(doc.monthProfitAdjustments);
   buyPrice = mergeProductMap(defaultBuyPrice, doc.buyPrice, 0);
   sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
   distributorStock = normalizeDistributorStock(doc.distributorStock);
@@ -249,6 +254,17 @@ if (WEB_PUSH_PUBLIC_KEY && WEB_PUSH_PRIVATE_KEY) {
   webPushEnabled = true;
 } else {
   console.warn("Web push disabled: WEB_PUSH_PUBLIC_KEY / WEB_PUSH_PRIVATE_KEY missing.");
+}
+
+function normalizeMonthProfitAdjustments(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  Object.keys(raw).forEach((month) => {
+    if (!/^\d{4}-\d{2}$/.test(month)) return;
+    const n = Number(raw[month]);
+    if (Number.isFinite(n)) out[month] = n;
+  });
+  return out;
 }
 
 function normalizePushSubscriptions(raw) {
@@ -660,6 +676,7 @@ app.get("/today-report", (req, res) => {
   let revenue = 0;
   let profit = 0;
   const currentMonth = getMonthKey(new Date());
+  const monthProfitAdjustment = Number(monthProfitAdjustments[currentMonth]) || 0;
   let monthRevenue = 0;
   let monthProfit = 0;
 
@@ -698,7 +715,8 @@ app.get("/today-report", (req, res) => {
     revenue,
     profit,
     monthRevenue,
-    monthProfit,
+    monthProfit: monthProfit + monthProfitAdjustment,
+    monthProfitAdjustment,
   });
 });
 
@@ -1125,10 +1143,56 @@ function handleResetProfit(req, res) {
   return res.json({ status: "reset", month, affected });
 }
 
+function calculateRawMonthProfit(month) {
+  let monthProfit = 0;
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const dt = getOrderDate(order);
+    if (!dt || getMonthKey(dt) !== month) return;
+    const orderProfitBase = Number.isFinite(Number(order.profit))
+      ? Number(order.profit)
+      : calculateOrderProfit(order);
+    const orderProfit = isOrderExcludedFromProfitStats(order) ? 0 : orderProfitBase;
+    monthProfit += orderProfit;
+  });
+  return monthProfit;
+}
+
+function handleSetMonthProfit(req, res) {
+  const password = String(req.body?.password || "");
+  if (password !== RESET_PROFIT_PASSWORD) {
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+
+  const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
+    ? req.body.month
+    : getMonthKey(new Date());
+
+  const desiredMonthProfit = Number(req.body?.desiredMonthProfit);
+  if (!Number.isFinite(desiredMonthProfit)) {
+    return res.status(400).json({ status: "error", message: "Invalid desiredMonthProfit" });
+  }
+
+  const rawMonthProfit = calculateRawMonthProfit(month);
+  const adjustment = desiredMonthProfit - rawMonthProfit;
+  monthProfitAdjustments[month] = adjustment;
+  saveData();
+
+  return res.json({
+    status: "saved",
+    month,
+    rawMonthProfit,
+    adjustment,
+    monthProfit: rawMonthProfit + adjustment,
+  });
+}
+
 app.post("/admin/reset-customer-money", handleResetCustomerMoney);
 app.post("/reset-customer-money", handleResetCustomerMoney);
 app.post("/admin/reset-profit", handleResetProfit);
 app.post("/reset-profit", handleResetProfit);
+app.post("/admin/set-month-profit", handleSetMonthProfit);
+app.post("/set-month-profit", handleSetMonthProfit);
 
 app.get("/orders", (req, res) => {
   res.json(orders);

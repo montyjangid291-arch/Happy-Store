@@ -264,6 +264,12 @@ input:focus, select:focus {
 </audio>
 <div id="closedOverlay">STORE IS CLOSED - Orders Disabled</div>
 <div id="storeStatus">STORE OPEN</div>
+<div class="infoBar" style="margin-top:8px;">
+  Query/Help:
+  <a href="https://wa.me/919983729301?text=Hi%20Monty%20Mart%2C%20mujhe%20query%20hai" target="_blank" rel="noopener noreferrer" style="font-weight:800;color:#0b5f8d;text-decoration:none;">
+    9983729301 (Tap for WhatsApp)
+  </a>
+</div>
 <div id="topCustomersBox" class="infoBar">Top 3 Customers (This Month): Loading...</div>
 
 <h2 style="text-align:center;">Customer Details</h2>
@@ -465,6 +471,7 @@ input:focus, select:focus {
     <div id="profitBox">Today Profit: Rs 0</div>
     <div id="monthProfitBox">This Month Profit: Rs 0</div>
     <button onclick="resetProfitTotals()" style="background:#d9534f;color:#fff;margin-top:8px;">Reset Profit</button>
+    <button onclick="setMonthProfitManually()" style="background:#0d6efd;color:#fff;margin-top:8px;">Set This Month Profit</button>
   </div>
 </div>
 
@@ -2316,6 +2323,50 @@ async function resetProfitTotals() {
       return;
     }
     alert(`Could not reset profit: ${msg}`);
+  }
+}
+
+async function setMonthProfitManually() {
+  const amountRaw = prompt("Set This Month Profit (Rs)");
+  if (amountRaw === null) return;
+  const desiredMonthProfit = Number(amountRaw);
+  if (!Number.isFinite(desiredMonthProfit)) {
+    alert("Valid amount required");
+    return;
+  }
+
+  const pass = prompt("Enter password to set month profit");
+  if (pass === null) return;
+  if (!pass.trim()) {
+    alert("Password required");
+    return;
+  }
+
+  try {
+    const payload = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: pass.trim(),
+        desiredMonthProfit,
+      })
+    };
+
+    let res = await apiFetch("/admin/set-month-profit", payload);
+    let data = await safeJson(res);
+    if ((res.status === 404 || data.status === "not_found") && !res.ok) {
+      res = await apiFetch("/set-month-profit", payload);
+      data = await safeJson(res);
+    }
+    if (!res.ok || data.status !== "saved") {
+      throw new Error(data.message || data.status || "Set month profit failed");
+    }
+
+    alert(`This Month Profit set to Rs ${Number(data.monthProfit) || 0}`);
+    refreshTodayReport(false);
+  } catch (err) {
+    console.error(err);
+    alert(`Could not set month profit: ${err.message || "Unknown error"}`);
   }
 }
 
