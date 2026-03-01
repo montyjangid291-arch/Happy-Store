@@ -280,7 +280,7 @@ input:focus, select:focus {
     <option value="upi" selected>Online (UPI)</option>
   </select><br>
 
-  <div id="deliveryNote" class="deliveryNote">Delivery Charges: Rs 10 (Room Delivery)</div>
+  <div id="deliveryNote" class="deliveryNote">Delivery Charges: Rs 0 (Self Pickup)</div>
 </div>
 
 <div class="container">
@@ -2425,7 +2425,8 @@ getById("roomNo").addEventListener("input", (e) => {
 getById("deviceIdBox").innerText = getOrCreateDeviceId();
 getById("storeHeader").addEventListener("click", registerSecretAdminTap);
 document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.shiftKey && String(e.key || "").toLowerCase() === "a") {
+  if (e.ctrlKey && e.altKey && String(e.key || "").toLowerCase() === "a") {
+    e.preventDefault();
     showAdmin();
   }
 });
