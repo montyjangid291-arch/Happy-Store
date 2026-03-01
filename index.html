@@ -386,7 +386,7 @@ input:focus, select:focus {
 </div>
 
 <div style="text-align:center; margin-top:30px;">
-  <button id="adminBtn" onclick="showAdmin()" style="display:none;">Admin</button>
+  <button id="adminBtn" onclick="showAdmin()">Admin Login</button>
 
   <div id="adminPanel">
     <h3>Admin</h3>
@@ -1411,8 +1411,8 @@ function addToCart(btn, _price, qtyId) {
 }
 
 function getDeliveryCharge(mode) {
-  if (mode === "pickup") return 0;
-  return 10;
+  const m = String(mode || "").toLowerCase().trim();
+  return m === "delivery" ? 10 : 0;
 }
 
 function normalizeWhatsAppPhone(raw) {
@@ -1432,7 +1432,8 @@ function getOrderRoutingByRoom(roomNo) {
 }
 
 function renderDeliveryNote() {
-  const mode = getById("mode").value;
+  const rawMode = String(getById("mode").value || "").toLowerCase().trim();
+  const mode = rawMode === "delivery" ? "delivery" : "pickup";
   const charge = getDeliveryCharge(mode);
   getById("deliveryNote").innerText =
     mode === "pickup"

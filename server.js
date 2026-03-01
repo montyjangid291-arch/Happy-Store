@@ -522,7 +522,9 @@ function recalculateOrderTotals(order) {
     ) || 0;
     itemsSubTotal += sellAtOrder * qty;
   });
-  const deliveryCharge = Number(order.deliveryCharge) || 0;
+  const mode = String(order.mode || "").toLowerCase().trim();
+  const deliveryCharge = mode === "delivery" ? 10 : 0;
+  order.deliveryCharge = deliveryCharge;
   order.total = itemsSubTotal + (order.items.length ? deliveryCharge : 0);
   order.profit = calculateOrderProfit(order);
 }
@@ -658,7 +660,10 @@ app.post("/order", async (req, res) => {
     }
     distributorStock[distributorRoom][i.name] -= i.qty;
   });
-  const deliveryCharge = Number(order.deliveryCharge) || 0;
+  const normalizedMode = String(order.mode || "").toLowerCase().trim() === "delivery" ? "delivery" : "pickup";
+  order.mode = normalizedMode;
+  const deliveryCharge = normalizedMode === "delivery" ? 10 : 0;
+  order.deliveryCharge = deliveryCharge;
   order.total = itemsSubTotal + deliveryCharge;
 
   order.id = Date.now();
