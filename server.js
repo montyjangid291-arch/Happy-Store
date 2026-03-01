@@ -2,11 +2,44 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 const webpush = require("web-push");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.set("trust proxy", 1);
+
+const allowedOrigins = String(process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((x) => x.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);
+    if (!allowedOrigins.length || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error("CORS blocked"));
+  },
+}));
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(express.json({ limit: "120kb" }));
 app.use(express.static(__dirname));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_MAX || 500),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.ADMIN_RATE_LIMIT_MAX || 80),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(apiLimiter);
 
 const defaultStock = {
   Maggi: 24,
@@ -233,6 +266,46 @@ app.use(async (req, res, next) => {
 const RESET_CUSTOMER_PASSWORD = process.env.RESET_CUSTOMER_PASSWORD || "291";
 const PRICE_UPDATE_PASSWORD = process.env.PRICE_UPDATE_PASSWORD || "291";
 const RESET_PROFIT_PASSWORD = process.env.RESET_PROFIT_PASSWORD || "291";
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "").trim();
+const ADMIN_SESSION_TTL_MS = Number(process.env.ADMIN_SESSION_TTL_MS || (8 * 60 * 60 * 1000));
+const adminSessions = new Map();
+
+if (!ADMIN_PASSWORD) {
+  console.warn("ADMIN_PASSWORD is not set. Admin login will be unavailable until configured.");
+}
+
+function cleanupExpiredAdminSessions() {
+  const now = Date.now();
+  for (const [token, value] of adminSessions.entries()) {
+    if (!value || Number(value.expiresAt) <= now) adminSessions.delete(token);
+  }
+}
+
+function issueAdminToken() {
+  const token = crypto.randomBytes(32).toString("hex");
+  adminSessions.set(token, { expiresAt: Date.now() + ADMIN_SESSION_TTL_MS });
+  return token;
+}
+
+function getBearerToken(authHeader) {
+  const raw = String(authHeader || "");
+  if (!raw.toLowerCase().startsWith("bearer ")) return "";
+  return raw.slice(7).trim();
+}
+
+function requireAdmin(req, res, next) {
+  cleanupExpiredAdminSessions();
+  const token = getBearerToken(req.headers.authorization) || String(req.headers["x-admin-token"] || "").trim();
+  if (!token) return res.status(401).json({ status: "unauthorized", message: "Admin login required" });
+  const session = adminSessions.get(token);
+  if (!session || Number(session.expiresAt) <= Date.now()) {
+    adminSessions.delete(token);
+    return res.status(401).json({ status: "unauthorized", message: "Session expired. Login again." });
+  }
+  session.expiresAt = Date.now() + ADMIN_SESSION_TTL_MS;
+  adminSessions.set(token, session);
+  return next();
+}
 const WEB_PUSH_PUBLIC_KEY = String(
   process.env.WEB_PUSH_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || ""
 ).trim();
@@ -486,6 +559,29 @@ function backfillLegacyOrderProfitData() {
 
 backfillLegacyOrderProfitData();
 
+app.post("/admin/login", adminLimiter, (req, res) => {
+  if (!ADMIN_PASSWORD) {
+    return res.status(503).json({ status: "error", message: "Admin password not configured on server" });
+  }
+  const password = String(req.body?.password || "");
+  if (!password || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ status: "unauthorized", message: "Invalid admin password" });
+  }
+  cleanupExpiredAdminSessions();
+  const token = issueAdminToken();
+  return res.json({ status: "ok", token, ttlMs: ADMIN_SESSION_TTL_MS });
+});
+
+app.post("/admin/logout", adminLimiter, requireAdmin, (req, res) => {
+  const token = getBearerToken(req.headers.authorization) || String(req.headers["x-admin-token"] || "").trim();
+  if (token) adminSessions.delete(token);
+  return res.json({ status: "logged_out" });
+});
+
+app.get("/admin/session", adminLimiter, requireAdmin, (req, res) => {
+  return res.json({ status: "ok" });
+});
+
 app.get("/stock", (req, res) => {
   res.json(storeStock);
 });
@@ -521,7 +617,7 @@ app.post("/push/unsubscribe", (req, res) => {
   return res.json({ status: "unsubscribed" });
 });
 
-app.post("/stock", (req, res) => {
+app.post("/stock", adminLimiter, requireAdmin, (req, res) => {
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({ status: "error", message: "Invalid stock" });
   }
@@ -611,7 +707,7 @@ app.get("/buy-price", (req, res) => {
   res.json(buyPrice);
 });
 
-app.post("/buy-price", (req, res) => {
+app.post("/buy-price", adminLimiter, requireAdmin, (req, res) => {
   const password = String(req.body?.password || "");
   if (password !== PRICE_UPDATE_PASSWORD) {
     return res.status(403).json({ status: "error", message: "Invalid password" });
@@ -629,7 +725,7 @@ app.get("/sell-price", (req, res) => {
   res.json(sellPrice);
 });
 
-app.post("/sell-price", (req, res) => {
+app.post("/sell-price", adminLimiter, requireAdmin, (req, res) => {
   const password = String(req.body?.password || "");
   if (password !== PRICE_UPDATE_PASSWORD) {
     return res.status(403).json({ status: "error", message: "Invalid password" });
@@ -747,7 +843,7 @@ app.post("/cancel-order", (req, res) => {
   res.json({ status: "cancelled", orderId });
 });
 
-app.post("/admin/order-status", (req, res) => {
+app.post("/admin/order-status", adminLimiter, requireAdmin, (req, res) => {
   const orderId = Number(req.body?.orderId);
   const action = String(req.body?.action || "").toLowerCase();
 
@@ -796,7 +892,7 @@ app.post("/admin/order-status", (req, res) => {
   return res.json({ status: "cancelled", orderId });
 });
 
-app.post("/admin/adjust-order", (req, res) => {
+app.post("/admin/adjust-order", adminLimiter, requireAdmin, (req, res) => {
   const orderId = Number(req.body?.orderId);
   const adjustedItems = req.body?.items;
 
@@ -874,7 +970,7 @@ app.post("/admin/adjust-order", (req, res) => {
   });
 });
 
-app.post("/accept-order", (req, res) => {
+app.post("/accept-order", adminLimiter, requireAdmin, (req, res) => {
   const orderId = Number(req.body?.orderId);
   if (!orderId) {
     return res.status(400).json({ status: "error", message: "Invalid orderId" });
@@ -996,7 +1092,7 @@ app.get("/customers-lifetime", (req, res) => {
   res.json({ totalCustomers: customers.length, customers });
 });
 
-app.get("/admin/customer-spend", (req, res) => {
+app.get("/admin/customer-spend", adminLimiter, requireAdmin, (req, res) => {
   const scope = String(req.query.scope || "month").toLowerCase();
   if (scope === "lifetime") {
     const rows = Object.values(manualCustomers.lifetime || {}).sort((a, b) => b.totalSpent - a.totalSpent);
@@ -1011,7 +1107,7 @@ app.get("/admin/customer-spend", (req, res) => {
   return res.json({ scope: "month", month, customers: rows });
 });
 
-app.post("/admin/customer-spend", (req, res) => {
+app.post("/admin/customer-spend", adminLimiter, requireAdmin, (req, res) => {
   const scope = String(req.body?.scope || "month").toLowerCase();
   const name = String(req.body?.name || "").trim();
   const room = String(req.body?.room || "").trim();
@@ -1040,7 +1136,7 @@ app.post("/admin/customer-spend", (req, res) => {
   return res.json({ status: "saved", scope: "month", month, customer: payload });
 });
 
-app.post("/admin/customer-spend/delete", (req, res) => {
+app.post("/admin/customer-spend/delete", adminLimiter, requireAdmin, (req, res) => {
   const scope = String(req.body?.scope || "month").toLowerCase();
   const name = String(req.body?.name || "").trim();
   const room = String(req.body?.room || "").trim();
@@ -1120,20 +1216,18 @@ function handleResetProfit(req, res) {
   return res.json({ status: "reset", month, affected });
 }
 
-app.post("/admin/reset-customer-money", handleResetCustomerMoney);
-app.post("/reset-customer-money", handleResetCustomerMoney);
-app.post("/admin/reset-profit", handleResetProfit);
-app.post("/reset-profit", handleResetProfit);
+app.post("/admin/reset-customer-money", adminLimiter, requireAdmin, handleResetCustomerMoney);
+app.post("/admin/reset-profit", adminLimiter, requireAdmin, handleResetProfit);
 
-app.get("/orders", (req, res) => {
+app.get("/orders", adminLimiter, requireAdmin, (req, res) => {
   res.json(orders);
 });
 
-app.get("/distributor-stock", (req, res) => {
+app.get("/distributor-stock", adminLimiter, requireAdmin, (req, res) => {
   res.json(normalizeDistributorStock(distributorStock));
 });
 
-app.post("/distributor-stock", (req, res) => {
+app.post("/distributor-stock", adminLimiter, requireAdmin, (req, res) => {
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({ status: "error", message: "Invalid distributor stock" });
   }
@@ -1142,7 +1236,7 @@ app.post("/distributor-stock", (req, res) => {
   return res.json({ status: "saved", distributorStock });
 });
 
-app.get("/distributor-month-summary", (req, res) => {
+app.get("/distributor-month-summary", adminLimiter, requireAdmin, (req, res) => {
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
     : getMonthKey(new Date());
@@ -1181,7 +1275,7 @@ app.get("/store-status",(req,res)=>{res.json({closed:storeClosed});
 });
 
 // change status (admin)
-app.post("/store-status",(req,res)=>{storeClosed=req.body.closed;
+app.post("/store-status", adminLimiter, requireAdmin, (req,res)=>{storeClosed=req.body.closed;
     console.log("STORE STATUS:",storeClosed ?
         "CLOSED":"open");
         res.json({status:"ok"});
