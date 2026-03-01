@@ -273,11 +273,11 @@ input:focus, select:focus {
 
   <select id="mode">
     <option value="delivery">Room Delivery</option>
-    <option value="pickup">Self Pickup</option>
+    <option value="pickup" selected>Self Pickup</option>
   </select><br>
   <select id="paymentMode">
     <option value="cash">Cash</option>
-    <option value="upi">Online (UPI)</option>
+    <option value="upi" selected>Online (UPI)</option>
   </select><br>
 
   <div id="deliveryNote" class="deliveryNote">Delivery Charges: Rs 10 (Room Delivery)</div>
@@ -417,6 +417,20 @@ input:focus, select:focus {
     <button onclick="loadAdminCustomersReport()">Load Customer Spending</button>
     <button onclick="resetCustomerMoney()" style="background:#d9534f;color:#fff;">Reset Customer Money</button>
     <div id="adminCustomersReport" style="margin-top:10px;"></div>
+    <h3>Manual Customer Entry/Edit</h3>
+    <div style="border:1px solid #d5e3ef;border-radius:10px;padding:10px;background:#f8fcff;">
+      <select id="manualCustomerScope">
+        <option value="month">This Month</option>
+        <option value="lifetime">Lifetime</option>
+      </select><br>
+      <input id="manualCustomerName" placeholder="Customer Name"><br>
+      <input id="manualCustomerRoom" placeholder="Room Number"><br>
+      <input id="manualCustomerSpent" type="number" min="0" placeholder="Total Spend (Rs)"><br>
+      <input id="manualCustomerOrders" type="number" min="0" placeholder="Orders Count"><br>
+      <button onclick="saveManualCustomerSpend()">Save / Update Customer</button>
+      <button onclick="deleteManualCustomerSpend()" style="background:#d9534f;color:#fff;">Delete Manual Entry</button>
+      <div id="manualCustomerStatus" style="margin-top:8px;font-size:12px;color:#245476;"></div>
+    </div>
     <h3>All-Time Customer Spending (Never Reset)</h3>
     <button onclick="loadLifetimeCustomersReport()">Load Lifetime Spending</button>
     <div id="lifetimeCustomersReport" style="margin-top:10px;"></div>
@@ -2067,6 +2081,85 @@ async function loadAdminCustomersReport() {
   } catch (err) {
     console.error(err);
     getById("adminCustomersReport").innerHTML = "<div>Could not load customer report</div>";
+  }
+}
+
+function setManualCustomerStatus(text, isError) {
+  const box = getById("manualCustomerStatus");
+  if (!box) return;
+  box.innerText = text;
+  box.style.color = isError ? "#b42318" : "#245476";
+}
+
+async function saveManualCustomerSpend() {
+  const scope = String(getById("manualCustomerScope")?.value || "month");
+  const name = String(getById("manualCustomerName")?.value || "").trim();
+  const room = String(getById("manualCustomerRoom")?.value || "").trim();
+  const totalSpent = Number(getById("manualCustomerSpent")?.value || 0);
+  const ordersCount = Number(getById("manualCustomerOrders")?.value || 0);
+
+  if (!name || !room) {
+    alert("Customer name and room number required");
+    return;
+  }
+
+  try {
+    const res = await apiFetch("/admin/customer-spend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scope,
+        name,
+        room,
+        totalSpent: Math.max(0, totalSpent || 0),
+        ordersCount: Math.max(0, ordersCount || 0),
+      }),
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "saved") {
+      throw new Error(data.message || "Save failed");
+    }
+    setManualCustomerStatus(`Saved: ${name} (${room})`, false);
+    loadTopCustomers();
+    loadAdminCustomersReport();
+    loadLifetimeCustomersReport();
+  } catch (err) {
+    console.error(err);
+    setManualCustomerStatus("Could not save manual entry", true);
+    alert(`Could not save customer spend: ${err.message || "Unknown error"}`);
+  }
+}
+
+async function deleteManualCustomerSpend() {
+  const scope = String(getById("manualCustomerScope")?.value || "month");
+  const name = String(getById("manualCustomerName")?.value || "").trim();
+  const room = String(getById("manualCustomerRoom")?.value || "").trim();
+
+  if (!name || !room) {
+    alert("Delete ke liye name aur room number required");
+    return;
+  }
+
+  if (!confirm(`Delete manual entry for ${name} (Room ${room})?`)) return;
+
+  try {
+    const res = await apiFetch("/admin/customer-spend/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope, name, room }),
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "deleted") {
+      throw new Error(data.message || "Delete failed");
+    }
+    setManualCustomerStatus(`Deleted: ${name} (${room})`, false);
+    loadTopCustomers();
+    loadAdminCustomersReport();
+    loadLifetimeCustomersReport();
+  } catch (err) {
+    console.error(err);
+    setManualCustomerStatus("Could not delete manual entry", true);
+    alert(`Could not delete manual entry: ${err.message || "Unknown error"}`);
   }
 }
 

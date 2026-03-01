@@ -38,6 +38,11 @@ const defaultSellPrice = {
   "Unibic Chocolate Chip Cookies": 30,
 };
 
+const defaultManualCustomers = {
+  monthly: {},
+  lifetime: {},
+};
+
 function getDefaultProductMap(fillValue) {
   return {
     Maggi: fillValue,
@@ -73,12 +78,56 @@ function normalizeDistributorStock(raw) {
   return result;
 }
 
+function normalizeManualCustomers(raw) {
+  const result = { monthly: {}, lifetime: {} };
+  if (!raw || typeof raw !== "object") return result;
+
+  const monthly = raw.monthly && typeof raw.monthly === "object" ? raw.monthly : {};
+  Object.keys(monthly).forEach((month) => {
+    if (!/^\d{4}-\d{2}$/.test(month)) return;
+    const monthBucket = monthly[month];
+    if (!monthBucket || typeof monthBucket !== "object") return;
+    result.monthly[month] = {};
+    Object.keys(monthBucket).forEach((key) => {
+      const entry = monthBucket[key];
+      if (!entry || typeof entry !== "object") return;
+      const name = String(entry.name || "").trim();
+      const room = String(entry.room || "").trim();
+      if (!name || !room) return;
+      result.monthly[month][buildCustomerKey(name, room)] = {
+        name,
+        room,
+        totalSpent: Math.max(0, Number(entry.totalSpent) || 0),
+        ordersCount: Math.max(0, Number(entry.ordersCount) || 0),
+      };
+    });
+  });
+
+  const lifetime = raw.lifetime && typeof raw.lifetime === "object" ? raw.lifetime : {};
+  Object.keys(lifetime).forEach((key) => {
+    const entry = lifetime[key];
+    if (!entry || typeof entry !== "object") return;
+    const name = String(entry.name || "").trim();
+    const room = String(entry.room || "").trim();
+    if (!name || !room) return;
+    result.lifetime[buildCustomerKey(name, room)] = {
+      name,
+      room,
+      totalSpent: Math.max(0, Number(entry.totalSpent) || 0),
+      ordersCount: Math.max(0, Number(entry.ordersCount) || 0),
+    };
+  });
+
+  return result;
+}
+
 const StoreStateSchema = new mongoose.Schema(
   {
     singletonKey: { type: String, required: true, unique: true, default: "main" },
     storeStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultStock }) },
     orders: { type: [mongoose.Schema.Types.Mixed], default: [] },
     pushSubscriptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    manualCustomers: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultManualCustomers }) },
     buyPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultBuyPrice }) },
     sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
     distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
@@ -92,6 +141,7 @@ const StoreState = mongoose.model("StoreState", StoreStateSchema);
 let storeStock = { ...defaultStock };
 let orders = [];
 let pushSubscriptions = [];
+let manualCustomers = normalizeManualCustomers(defaultManualCustomers);
 let buyPrice = { ...defaultBuyPrice };
 let sellPrice = { ...defaultSellPrice };
 let distributorStock = normalizeDistributorStock(defaultDistributorStock);
@@ -118,6 +168,7 @@ function saveData() {
       storeStock,
       orders,
       pushSubscriptions,
+      manualCustomers,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -137,6 +188,7 @@ async function loadStateFromMongo() {
       storeStock,
       orders,
       pushSubscriptions,
+      manualCustomers,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -148,6 +200,7 @@ async function loadStateFromMongo() {
   storeStock = mergeProductMap(defaultStock, doc.storeStock, 0);
   orders = Array.isArray(doc.orders) ? doc.orders : [];
   pushSubscriptions = normalizePushSubscriptions(doc.pushSubscriptions);
+  manualCustomers = normalizeManualCustomers(doc.manualCustomers);
   buyPrice = mergeProductMap(defaultBuyPrice, doc.buyPrice, 0);
   sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
   distributorStock = normalizeDistributorStock(doc.distributorStock);
@@ -302,6 +355,54 @@ function getOrderDate(order) {
 
 function getMonthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function buildCustomerKey(nameRaw, roomRaw) {
+  const name = String(nameRaw || "").trim().toLowerCase();
+  const room = String(roomRaw || "").trim();
+  return `${name}|${room}`;
+}
+
+function applyMonthlyManualCustomers(spendMap, month) {
+  const monthlyBucket =
+    manualCustomers &&
+    manualCustomers.monthly &&
+    typeof manualCustomers.monthly === "object"
+      ? manualCustomers.monthly[month]
+      : null;
+  if (!monthlyBucket || typeof monthlyBucket !== "object") return;
+
+  Object.keys(monthlyBucket).forEach((key) => {
+    const row = monthlyBucket[key];
+    if (!row) return;
+    spendMap[key] = {
+      name: String(row.name || "").trim() || "Unknown",
+      room: String(row.room || "").trim() || "-",
+      totalSpent: Math.max(0, Number(row.totalSpent) || 0),
+      ordersCount: Math.max(0, Number(row.ordersCount) || 0),
+    };
+  });
+}
+
+function applyLifetimeManualCustomers(spendMap) {
+  const lifetimeBucket =
+    manualCustomers &&
+    manualCustomers.lifetime &&
+    typeof manualCustomers.lifetime === "object"
+      ? manualCustomers.lifetime
+      : null;
+  if (!lifetimeBucket || typeof lifetimeBucket !== "object") return;
+
+  Object.keys(lifetimeBucket).forEach((key) => {
+    const row = lifetimeBucket[key];
+    if (!row) return;
+    spendMap[key] = {
+      name: String(row.name || "").trim() || "Unknown",
+      room: String(row.room || "").trim() || "-",
+      totalSpent: Math.max(0, Number(row.totalSpent) || 0),
+      ordersCount: Math.max(0, Number(row.ordersCount) || 0),
+    };
+  });
 }
 
 function isOrderCancelled(order) {
@@ -708,7 +809,7 @@ app.get("/top-customers", (req, res) => {
     if (isOrderExcludedFromCustomerStats(order)) return;
     const dt = getOrderDate(order);
     if (!dt || getMonthKey(dt) !== month) return;
-    const key = `${String(order.name || "").trim()}|${String(order.room || "").trim()}`;
+    const key = buildCustomerKey(order.name, order.room);
     if (!spendMap[key]) {
       spendMap[key] = {
         name: String(order.name || "").trim() || "Unknown",
@@ -720,6 +821,8 @@ app.get("/top-customers", (req, res) => {
     spendMap[key].totalSpent += Number(order.total) || 0;
     spendMap[key].ordersCount += 1;
   });
+
+  applyMonthlyManualCustomers(spendMap, month);
 
   const ranked = Object.values(spendMap)
     .sort((a, b) => b.totalSpent - a.totalSpent)
@@ -739,7 +842,7 @@ app.get("/customers-report", (req, res) => {
     if (isOrderCancelled(order)) return;
     const dt = getOrderDate(order);
     if (!dt || getMonthKey(dt) !== month) return;
-    const key = `${String(order.name || "").trim()}|${String(order.room || "").trim()}`;
+    const key = buildCustomerKey(order.name, order.room);
     if (!allSpendMap[key]) {
       allSpendMap[key] = {
         name: String(order.name || "").trim() || "Unknown",
@@ -764,6 +867,9 @@ app.get("/customers-report", (req, res) => {
     activeSpendMap[key].ordersCount += 1;
   });
 
+  applyMonthlyManualCustomers(allSpendMap, month);
+  applyMonthlyManualCustomers(activeSpendMap, month);
+
   const allCustomers = Object.values(allSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
   const customers = Object.values(activeSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
   res.json({
@@ -779,7 +885,7 @@ app.get("/customers-lifetime", (req, res) => {
   const spendMap = {};
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    const key = `${String(order.name || "").trim()}|${String(order.room || "").trim()}`;
+    const key = buildCustomerKey(order.name, order.room);
     if (!spendMap[key]) {
       spendMap[key] = {
         name: String(order.name || "").trim() || "Unknown",
@@ -792,8 +898,83 @@ app.get("/customers-lifetime", (req, res) => {
     spendMap[key].ordersCount += 1;
   });
 
+  applyLifetimeManualCustomers(spendMap);
   const customers = Object.values(spendMap).sort((a, b) => b.totalSpent - a.totalSpent);
   res.json({ totalCustomers: customers.length, customers });
+});
+
+app.get("/admin/customer-spend", (req, res) => {
+  const scope = String(req.query.scope || "month").toLowerCase();
+  if (scope === "lifetime") {
+    const rows = Object.values(manualCustomers.lifetime || {}).sort((a, b) => b.totalSpent - a.totalSpent);
+    return res.json({ scope: "lifetime", customers: rows });
+  }
+
+  const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
+    ? req.query.month
+    : getMonthKey(new Date());
+  const rows = Object.values((manualCustomers.monthly && manualCustomers.monthly[month]) || {})
+    .sort((a, b) => b.totalSpent - a.totalSpent);
+  return res.json({ scope: "month", month, customers: rows });
+});
+
+app.post("/admin/customer-spend", (req, res) => {
+  const scope = String(req.body?.scope || "month").toLowerCase();
+  const name = String(req.body?.name || "").trim();
+  const room = String(req.body?.room || "").trim();
+  const totalSpent = Math.max(0, Number(req.body?.totalSpent) || 0);
+  const ordersCount = Math.max(0, Number(req.body?.ordersCount) || 0);
+
+  if (!name || !room) {
+    return res.status(400).json({ status: "error", message: "Name and room are required" });
+  }
+
+  const key = buildCustomerKey(name, room);
+  const payload = { name, room, totalSpent, ordersCount };
+
+  if (scope === "lifetime") {
+    manualCustomers.lifetime[key] = payload;
+    saveData();
+    return res.json({ status: "saved", scope: "lifetime", customer: payload });
+  }
+
+  const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
+    ? req.body.month
+    : getMonthKey(new Date());
+  if (!manualCustomers.monthly[month]) manualCustomers.monthly[month] = {};
+  manualCustomers.monthly[month][key] = payload;
+  saveData();
+  return res.json({ status: "saved", scope: "month", month, customer: payload });
+});
+
+app.post("/admin/customer-spend/delete", (req, res) => {
+  const scope = String(req.body?.scope || "month").toLowerCase();
+  const name = String(req.body?.name || "").trim();
+  const room = String(req.body?.room || "").trim();
+  if (!name || !room) {
+    return res.status(400).json({ status: "error", message: "Name and room are required" });
+  }
+  const key = buildCustomerKey(name, room);
+
+  if (scope === "lifetime") {
+    if (manualCustomers.lifetime && manualCustomers.lifetime[key]) {
+      delete manualCustomers.lifetime[key];
+      saveData();
+    }
+    return res.json({ status: "deleted", scope: "lifetime" });
+  }
+
+  const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
+    ? req.body.month
+    : getMonthKey(new Date());
+  if (manualCustomers.monthly && manualCustomers.monthly[month] && manualCustomers.monthly[month][key]) {
+    delete manualCustomers.monthly[month][key];
+    if (Object.keys(manualCustomers.monthly[month]).length === 0) {
+      delete manualCustomers.monthly[month];
+    }
+    saveData();
+  }
+  return res.json({ status: "deleted", scope: "month", month });
 });
 
 function handleResetCustomerMoney(req, res) {
