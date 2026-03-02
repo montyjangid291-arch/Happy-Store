@@ -264,6 +264,9 @@ input:focus, select:focus {
 </audio>
 <div id="closedOverlay">STORE IS CLOSED - Orders Disabled</div>
 <div id="storeStatus">STORE OPEN</div>
+<div id="closingSoonBanner" class="infoBar" style="display:none;background:#fff4ce;border-color:#f5d58b;color:#6b4f00;font-weight:700;">
+  Store is going to close soon.
+</div>
 <div class="infoBar" style="margin-top:8px;">
   Query/Help:
   <a href="https://wa.me/919983729301?text=Hi%20Monty%20Mart%2C%20mujhe%20query%20hai" target="_blank" rel="noopener noreferrer" style="font-weight:800;color:#0b5f8d;text-decoration:none;">
@@ -429,8 +432,10 @@ input:focus, select:focus {
     <button onclick="toggleStore()">Open/Close</button>
     <button onclick="toggleRoomDeliveryAvailability()">Room Delivery ON/OFF</button>
     <button onclick="toggleAutoClose1230()">Auto Close 12:30 AM ON/OFF</button>
+    <button onclick="toggleClosingSoonAlert()">Store Closing Soon Alert ON/OFF</button>
     <div id="deliveryStatusAdmin" style="margin-top:6px;font-size:12px;color:#a94442;">Room Delivery: Available</div>
     <div id="autoCloseStatusAdmin" style="margin-top:4px;font-size:12px;color:#6f42c1;">Auto Close 12:30 AM: OFF</div>
+    <div id="closingSoonStatusAdmin" style="margin-top:4px;font-size:12px;color:#6b4f00;">Closing Soon Alert: OFF</div>
 
     <hr>
     <button onclick="loadOrders()">Show Live Orders</button>
@@ -527,6 +532,7 @@ let storeClosed = false;
 let roomDeliveryBlocked = false;
 let autoCloseAt1230Enabled = false;
 let autoCloseLastRunDate = "";
+let closingSoonAlertEnabled = false;
 let orderCounter = parseInt(localStorage.getItem("orderNo") || "1001", 10);
 let lastSeenOrderId = null;
 let lastSeenOrderCount = 0;
@@ -1058,6 +1064,7 @@ async function updateStoreStatus() {
     roomDeliveryBlocked = !!data.roomDeliveryBlocked;
     autoCloseAt1230Enabled = !!data.autoCloseAt1230Enabled;
     autoCloseLastRunDate = String(data.autoCloseLastRunDate || "");
+    closingSoonAlertEnabled = !!data.closingSoonAlertEnabled;
     renderDeliveryNote();
     const adminDeliveryStatus = getById("deliveryStatusAdmin");
     if (adminDeliveryStatus) {
@@ -1068,6 +1075,10 @@ async function updateStoreStatus() {
       autoCloseStatusAdmin.innerText = autoCloseAt1230Enabled
         ? `Auto Close 12:30 AM: ON${autoCloseLastRunDate ? ` (Last: ${autoCloseLastRunDate})` : ""}`
         : "Auto Close 12:30 AM: OFF";
+    }
+    const closingSoonStatusAdmin = getById("closingSoonStatusAdmin");
+    if (closingSoonStatusAdmin) {
+      closingSoonStatusAdmin.innerText = closingSoonAlertEnabled ? "Closing Soon Alert: ON" : "Closing Soon Alert: OFF";
     }
   } catch (err) {
     console.log("Could not fetch store status:", err);
@@ -1432,6 +1443,11 @@ function openExternalUrl(url, openInNewTab) {
     return true;
   } catch (_e) {
     return false;
+  }
+
+  const closingSoonBanner = getById("closingSoonBanner");
+  if (closingSoonBanner) {
+    closingSoonBanner.style.display = closingSoonAlertEnabled ? "block" : "none";
   }
 }
 
@@ -2482,6 +2498,32 @@ async function toggleAutoClose1230() {
   } catch (err) {
     console.error(err);
     alert(`Could not update auto-close setting: ${err.message || "Unknown error"}`);
+  }
+}
+
+async function toggleClosingSoonAlert() {
+  try {
+    const nextEnabled = !closingSoonAlertEnabled;
+    const res = await apiFetch("/closing-alert-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ closingSoonAlertEnabled: nextEnabled })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "ok") throw new Error(data.message || "Closing alert update failed");
+    closingSoonAlertEnabled = !!data.closingSoonAlertEnabled;
+    const closingSoonStatusAdmin = getById("closingSoonStatusAdmin");
+    if (closingSoonStatusAdmin) {
+      closingSoonStatusAdmin.innerText = closingSoonAlertEnabled ? "Closing Soon Alert: ON" : "Closing Soon Alert: OFF";
+    }
+    const closingSoonBanner = getById("closingSoonBanner");
+    if (closingSoonBanner) {
+      closingSoonBanner.style.display = closingSoonAlertEnabled ? "block" : "none";
+    }
+    alert(closingSoonAlertEnabled ? "Store closing soon alert enabled" : "Store closing soon alert disabled");
+  } catch (err) {
+    console.error(err);
+    alert(`Could not update closing soon alert: ${err.message || "Unknown error"}`);
   }
 }
 

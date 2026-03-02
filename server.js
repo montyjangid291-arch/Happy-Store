@@ -141,6 +141,7 @@ const StoreStateSchema = new mongoose.Schema(
     roomDeliveryBlocked: { type: Boolean, default: false },
     autoCloseAt1230Enabled: { type: Boolean, default: false },
     autoCloseLastRunDate: { type: String, default: "" },
+    closingSoonAlertEnabled: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -160,6 +161,7 @@ let storeClosed = false;
 let roomDeliveryBlocked = false;
 let autoCloseAt1230Enabled = false;
 let autoCloseLastRunDate = "";
+let closingSoonAlertEnabled = false;
 let initPromise = null;
 
 function mergeProductMap(baseMap, incomingMap, fallbackValue = 0) {
@@ -192,6 +194,7 @@ function saveData() {
       roomDeliveryBlocked,
       autoCloseAt1230Enabled,
       autoCloseLastRunDate,
+      closingSoonAlertEnabled,
     },
     { upsert: true, setDefaultsOnInsert: true, new: true }
   ).catch((err) => {
@@ -217,6 +220,7 @@ async function loadStateFromMongo() {
       roomDeliveryBlocked,
       autoCloseAt1230Enabled,
       autoCloseLastRunDate,
+      closingSoonAlertEnabled,
     });
     return;
   }
@@ -234,6 +238,7 @@ async function loadStateFromMongo() {
   roomDeliveryBlocked = !!doc.roomDeliveryBlocked;
   autoCloseAt1230Enabled = !!doc.autoCloseAt1230Enabled;
   autoCloseLastRunDate = String(doc.autoCloseLastRunDate || "");
+  closingSoonAlertEnabled = !!doc.closingSoonAlertEnabled;
 }
 
 async function initDatabase() {
@@ -475,7 +480,7 @@ function applyMonthlyManualCustomers(spendMap, month) {
 
 async function readStoreFlagsFromDb() {
   const doc = await StoreState.findOne({ singletonKey: "main" })
-    .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1 })
+    .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1, closingSoonAlertEnabled: 1 })
     .lean();
   if (!doc) return null;
   return {
@@ -483,6 +488,7 @@ async function readStoreFlagsFromDb() {
     roomDeliveryBlocked: !!doc.roomDeliveryBlocked,
     autoCloseAt1230Enabled: !!doc.autoCloseAt1230Enabled,
     autoCloseLastRunDate: String(doc.autoCloseLastRunDate || ""),
+    closingSoonAlertEnabled: !!doc.closingSoonAlertEnabled,
   };
 }
 
@@ -1417,6 +1423,7 @@ app.get("/store-status", async (req, res) => {
       roomDeliveryBlocked = !!flags.roomDeliveryBlocked;
       autoCloseAt1230Enabled = !!flags.autoCloseAt1230Enabled;
       autoCloseLastRunDate = String(flags.autoCloseLastRunDate || "");
+      closingSoonAlertEnabled = !!flags.closingSoonAlertEnabled;
     }
   } catch (err) {
     console.error("Could not read store status from DB:", err);
@@ -1426,6 +1433,7 @@ app.get("/store-status", async (req, res) => {
     roomDeliveryBlocked: !!roomDeliveryBlocked,
     autoCloseAt1230Enabled: !!autoCloseAt1230Enabled,
     autoCloseLastRunDate: String(autoCloseLastRunDate || ""),
+    closingSoonAlertEnabled: !!closingSoonAlertEnabled,
   });
 });
 
@@ -1463,6 +1471,19 @@ app.post("/auto-close-status", (req, res) => {
     autoCloseAt1230Enabled,
     autoCloseLastRunDate: String(autoCloseLastRunDate || ""),
   });
+});
+
+app.get("/closing-alert-status", (req, res) => {
+  return res.json({ closingSoonAlertEnabled: !!closingSoonAlertEnabled });
+});
+
+app.post("/closing-alert-status", (req, res) => {
+  if (typeof req.body?.closingSoonAlertEnabled !== "boolean") {
+    return res.status(400).json({ status: "error", message: "closingSoonAlertEnabled must be true/false" });
+  }
+  closingSoonAlertEnabled = !!req.body.closingSoonAlertEnabled;
+  saveData();
+  return res.json({ status: "ok", closingSoonAlertEnabled });
 });
 
 app.get("/delivery-status", (req, res) => {
