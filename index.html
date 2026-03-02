@@ -287,6 +287,7 @@ input:focus, select:focus {
   </select><br>
 
   <div id="deliveryNote" class="deliveryNote">Delivery Charges: Rs 0 (Self Pickup)</div>
+  <div id="paymentFlowNote" class="deliveryNote" style="color:#c24d00;"></div>
 </div>
 
 <div class="container">
@@ -1417,10 +1418,14 @@ function renderDeliveryNote() {
   const rawMode = String(getById("mode").value || "").toLowerCase().trim();
   const mode = rawMode === "delivery" ? "delivery" : "pickup";
   const charge = getDeliveryCharge(mode);
+  const paymentFlowNote = getById("paymentFlowNote");
   getById("deliveryNote").innerText =
     mode === "pickup"
       ? "Delivery Charges: Rs 0 (Self Pickup)"
       : `Delivery Charges: Rs ${charge} (Room Delivery)`;
+  if (paymentFlowNote) {
+    paymentFlowNote.innerText = mode === "delivery" ? "Order will be placed after payment." : "";
+  }
 }
 
 function isMobileDevice() {
