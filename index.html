@@ -484,8 +484,11 @@ input:focus, select:focus {
     <div style="font-size:12px;color:#666;margin-top:6px;">Buy/Sell price save karne ke liye password required hai.</div>
     <div id="profitBox">Today Profit: Rs 0</div>
     <div id="monthProfitBox">This Month Profit: Rs 0</div>
+    <div id="deliveryProfitBox">Room Delivery Profit (Today): Rs 0</div>
+    <div id="monthDeliveryProfitBox">Room Delivery Profit (This Month): Rs 0</div>
     <button onclick="resetProfitTotals()" style="background:#d9534f;color:#fff;margin-top:8px;">Reset Profit</button>
     <button onclick="setMonthProfitManually()" style="background:#0d6efd;color:#fff;margin-top:8px;">Set This Month Profit</button>
+    <button onclick="setMonthDeliveryProfitManually()" style="background:#198754;color:#fff;margin-top:8px;">Set Month Delivery Profit</button>
   </div>
 </div>
 
@@ -1792,10 +1795,14 @@ async function refreshTodayReport(showPopup) {
     const monthEarningsBox = getById("monthEarningsBox");
     const profitBox = getById("profitBox");
     const monthProfitBox = getById("monthProfitBox");
+    const deliveryProfitBox = getById("deliveryProfitBox");
+    const monthDeliveryProfitBox = getById("monthDeliveryProfitBox");
     if (earningsBox) earningsBox.innerText = `Today Earnings: Rs ${data.revenue || 0}`;
     if (monthEarningsBox) monthEarningsBox.innerText = `This Month Earning: Rs ${data.monthRevenue || 0}`;
     if (profitBox) profitBox.innerText = `Today Profit: Rs ${data.profit || 0}`;
     if (monthProfitBox) monthProfitBox.innerText = `This Month Profit: Rs ${data.monthProfit || 0}`;
+    if (deliveryProfitBox) deliveryProfitBox.innerText = `Room Delivery Profit (Today): Rs ${data.deliveryProfit || 0}`;
+    if (monthDeliveryProfitBox) monthDeliveryProfitBox.innerText = `Room Delivery Profit (This Month): Rs ${data.monthDeliveryProfit || 0}`;
 
     if (!showPopup) return;
 
@@ -1812,8 +1819,10 @@ async function refreshTodayReport(showPopup) {
     text += `\nOrders: ${data.ordersCount || 0}`;
     text += `\nRevenue Rs ${data.revenue || 0}`;
     text += `\nProfit Rs ${data.profit || 0}`;
+    text += `\nDelivery Profit Rs ${data.deliveryProfit || 0}`;
     text += `\nMonth Revenue Rs ${data.monthRevenue || 0}`;
     text += `\nMonth Profit Rs ${data.monthProfit || 0}`;
+    text += `\nMonth Delivery Profit Rs ${data.monthDeliveryProfit || 0}`;
     alert(text);
   } catch (err) {
     console.error(err);
@@ -1874,6 +1883,11 @@ async function loadOrders() {
       const itemsTotal = items.reduce((sum, i) => sum + ((Number(i.qty) || 0) * (Number(i.price) || 0)), 0);
       const deliveryCharge = Number(o.deliveryCharge) || 0;
       const grandTotal = Number(o.total) || (itemsTotal + deliveryCharge);
+      const createdAtMs = o && o.createdAt ? new Date(o.createdAt).getTime() : NaN;
+      const cancelLeftSec = Number.isFinite(createdAtMs)
+        ? Math.ceil((CANCEL_WINDOW_MS - (Date.now() - createdAtMs)) / 1000)
+        : 0;
+      const cancelWindowText = cancelLeftSec > 0 ? `${cancelLeftSec}s left` : "Expired";
       return `
 <div style="border:1px solid #aaa;padding:8px;margin:5px;">
 <b>${o.name}</b> (Room ${o.room})<br>
@@ -1885,6 +1899,7 @@ ${itemRows || "No items"}<br>
 Items Total: Rs ${itemsTotal}<br>
 Delivery: Rs ${deliveryCharge}<br>
 Grand Total: Rs ${grandTotal}<br>
+Customer Cancel Window: <b>${cancelWindowText}</b><br>
 ${(o.status !== "cancelled" && orderId > 0) ? `<button class="btn" style="background:#ff9800;padding:6px 10px;margin-top:6px;" onclick="adminAdjustOrderPrompt(${orderId})">Adjust Qty</button><br>` : ""}
 ${(o.status !== "cancelled" && orderId > 0) ? `<button class="btn" style="background:#ff3b3b;padding:6px 10px;margin-top:6px;" onclick="adminQuickCancelOrder(${orderId})">Quick Cancel</button><br>` : ""}
 <small>${o.time}</small>
@@ -2422,6 +2437,50 @@ async function setMonthProfitManually() {
   } catch (err) {
     console.error(err);
     alert(`Could not set month profit: ${err.message || "Unknown error"}`);
+  }
+}
+
+async function setMonthDeliveryProfitManually() {
+  const amountRaw = prompt("Set This Month Room Delivery Profit (Rs)");
+  if (amountRaw === null) return;
+  const desiredMonthDeliveryProfit = Number(amountRaw);
+  if (!Number.isFinite(desiredMonthDeliveryProfit)) {
+    alert("Valid amount required");
+    return;
+  }
+
+  const pass = prompt("Enter password to set room delivery month profit");
+  if (pass === null) return;
+  if (!pass.trim()) {
+    alert("Password required");
+    return;
+  }
+
+  try {
+    const payload = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: pass.trim(),
+        desiredMonthDeliveryProfit,
+      })
+    };
+
+    let res = await apiFetch("/admin/set-month-delivery-profit", payload);
+    let data = await safeJson(res);
+    if ((res.status === 404 || data.status === "not_found") && !res.ok) {
+      res = await apiFetch("/set-month-delivery-profit", payload);
+      data = await safeJson(res);
+    }
+    if (!res.ok || data.status !== "saved") {
+      throw new Error(data.message || data.status || "Set month delivery profit failed");
+    }
+
+    alert(`This Month Room Delivery Profit set to Rs ${Number(data.monthDeliveryProfit) || 0}`);
+    refreshTodayReport(false);
+  } catch (err) {
+    console.error(err);
+    alert(`Could not set room delivery month profit: ${err.message || "Unknown error"}`);
   }
 }
 

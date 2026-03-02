@@ -133,6 +133,7 @@ const StoreStateSchema = new mongoose.Schema(
     pushSubscriptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     manualCustomers: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultManualCustomers }) },
     monthProfitAdjustments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
+    monthDeliveryProfitAdjustments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
     buyPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultBuyPrice }) },
     sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
     distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
@@ -148,6 +149,7 @@ let orders = [];
 let pushSubscriptions = [];
 let manualCustomers = normalizeManualCustomers(defaultManualCustomers);
 let monthProfitAdjustments = {};
+let monthDeliveryProfitAdjustments = {};
 let buyPrice = { ...defaultBuyPrice };
 let sellPrice = { ...defaultSellPrice };
 let distributorStock = normalizeDistributorStock(defaultDistributorStock);
@@ -176,6 +178,7 @@ function saveData() {
       pushSubscriptions,
       manualCustomers,
       monthProfitAdjustments,
+      monthDeliveryProfitAdjustments,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -197,6 +200,7 @@ async function loadStateFromMongo() {
       pushSubscriptions,
       manualCustomers,
       monthProfitAdjustments,
+      monthDeliveryProfitAdjustments,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -210,6 +214,7 @@ async function loadStateFromMongo() {
   pushSubscriptions = normalizePushSubscriptions(doc.pushSubscriptions);
   manualCustomers = normalizeManualCustomers(doc.manualCustomers);
   monthProfitAdjustments = normalizeMonthProfitAdjustments(doc.monthProfitAdjustments);
+  monthDeliveryProfitAdjustments = normalizeMonthProfitAdjustments(doc.monthDeliveryProfitAdjustments);
   buyPrice = mergeProductMap(defaultBuyPrice, doc.buyPrice, 0);
   sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
   distributorStock = normalizeDistributorStock(doc.distributorStock);
@@ -712,10 +717,13 @@ app.get("/today-report", (req, res) => {
   const items = {};
   let revenue = 0;
   let profit = 0;
+  let deliveryProfit = 0;
   const currentMonth = getMonthKey(new Date());
   const monthProfitAdjustment = Number(monthProfitAdjustments[currentMonth]) || 0;
+  const monthDeliveryProfitAdjustment = Number(monthDeliveryProfitAdjustments[currentMonth]) || 0;
   let monthRevenue = 0;
   let monthProfit = 0;
+  let monthDeliveryProfit = 0;
 
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
@@ -726,10 +734,16 @@ app.get("/today-report", (req, res) => {
       ? Number(order.profit)
       : calculateOrderProfit(order);
     const orderProfit = isOrderExcludedFromProfitStats(order) ? 0 : orderProfitBase;
+    const orderDeliveryProfitBase =
+      String(order.mode || "").toLowerCase() === "delivery"
+        ? (Number(order.deliveryCharge) || 0)
+        : 0;
+    const orderDeliveryProfit = isOrderExcludedFromProfitStats(order) ? 0 : orderDeliveryProfitBase;
 
     if (formatLocalDate(dt) === todayKey) {
       revenue += orderTotal;
       profit += orderProfit;
+      deliveryProfit += orderDeliveryProfit;
       if (Array.isArray(order.items)) {
         order.items.forEach((item) => {
           const qty = Number(item.qty) || 0;
@@ -741,6 +755,7 @@ app.get("/today-report", (req, res) => {
     if (getMonthKey(dt) === currentMonth) {
       monthRevenue += orderTotal;
       monthProfit += orderProfit;
+      monthDeliveryProfit += orderDeliveryProfit;
     }
   });
 
@@ -751,9 +766,12 @@ app.get("/today-report", (req, res) => {
     items,
     revenue,
     profit,
+    deliveryProfit,
     monthRevenue,
     monthProfit: monthProfit + monthProfitAdjustment,
+    monthDeliveryProfit: monthDeliveryProfit + monthDeliveryProfitAdjustment,
     monthProfitAdjustment,
+    monthDeliveryProfitAdjustment,
   });
 });
 
@@ -1195,6 +1213,19 @@ function calculateRawMonthProfit(month) {
   return monthProfit;
 }
 
+function calculateRawMonthDeliveryProfit(month) {
+  let monthDeliveryProfit = 0;
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const dt = getOrderDate(order);
+    if (!dt || getMonthKey(dt) !== month) return;
+    if (isOrderExcludedFromProfitStats(order)) return;
+    if (String(order.mode || "").toLowerCase() !== "delivery") return;
+    monthDeliveryProfit += Number(order.deliveryCharge) || 0;
+  });
+  return monthDeliveryProfit;
+}
+
 function handleSetMonthProfit(req, res) {
   const password = String(req.body?.password || "");
   if (password !== RESET_PROFIT_PASSWORD) {
@@ -1230,6 +1261,38 @@ app.post("/admin/reset-profit", handleResetProfit);
 app.post("/reset-profit", handleResetProfit);
 app.post("/admin/set-month-profit", handleSetMonthProfit);
 app.post("/set-month-profit", handleSetMonthProfit);
+
+function handleSetMonthDeliveryProfit(req, res) {
+  const password = String(req.body?.password || "");
+  if (password !== RESET_PROFIT_PASSWORD) {
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+
+  const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
+    ? req.body.month
+    : getMonthKey(new Date());
+
+  const desiredMonthDeliveryProfit = Number(req.body?.desiredMonthDeliveryProfit);
+  if (!Number.isFinite(desiredMonthDeliveryProfit)) {
+    return res.status(400).json({ status: "error", message: "Invalid desiredMonthDeliveryProfit" });
+  }
+
+  const rawMonthDeliveryProfit = calculateRawMonthDeliveryProfit(month);
+  const adjustment = desiredMonthDeliveryProfit - rawMonthDeliveryProfit;
+  monthDeliveryProfitAdjustments[month] = adjustment;
+  saveData();
+
+  return res.json({
+    status: "saved",
+    month,
+    rawMonthDeliveryProfit,
+    adjustment,
+    monthDeliveryProfit: rawMonthDeliveryProfit + adjustment,
+  });
+}
+
+app.post("/admin/set-month-delivery-profit", handleSetMonthDeliveryProfit);
+app.post("/set-month-delivery-profit", handleSetMonthDeliveryProfit);
 
 app.get("/orders", (req, res) => {
   res.json(orders);
