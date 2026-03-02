@@ -363,6 +363,19 @@ function formatLocalDate(date) {
   return `${y}-${m}-${d}`;
 }
 
+function formatOrderDisplayTime(date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
 function getOrderDate(order) {
   if (order.createdAt) {
     const dt = new Date(order.createdAt);
@@ -591,7 +604,7 @@ app.post("/order", async (req, res) => {
   order.total = itemsSubTotal + deliveryCharge;
 
   order.id = Date.now();
-  order.time = new Date().toLocaleString();
+  order.time = formatOrderDisplayTime(new Date());
   order.createdAt = new Date().toISOString();
   order.status = "active";
   order.cancelledAt = null;
