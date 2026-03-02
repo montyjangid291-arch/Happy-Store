@@ -417,6 +417,26 @@ function applyMonthlyManualCustomers(spendMap, month) {
   });
 }
 
+async function readStoreClosedFromDb() {
+  const doc = await StoreState.findOne({ singletonKey: "main" }).select({ storeClosed: 1 }).lean();
+  if (!doc) return null;
+  return !!doc.storeClosed;
+}
+
+async function persistStoreClosed(nextClosed) {
+  const doc = await StoreState.findOneAndUpdate(
+    { singletonKey: "main" },
+    {
+      $set: {
+        singletonKey: "main",
+        storeClosed: !!nextClosed,
+      },
+    },
+    { upsert: true, setDefaultsOnInsert: true, new: true }
+  ).lean();
+  return !!(doc && doc.storeClosed);
+}
+
 function applyLifetimeManualCustomers(spendMap) {
   const lifetimeBucket =
     manualCustomers &&
@@ -1263,15 +1283,33 @@ app.get("/distributor-month-summary", (req, res) => {
 });
 // =====store open/close status ===== 
 // get status 
-app.get("/store-status",(req,res)=>{res.json({closed:storeClosed});
+app.get("/store-status", async (req, res) => {
+  try {
+    const closedFromDb = await readStoreClosedFromDb();
+    if (closedFromDb !== null) {
+      storeClosed = closedFromDb;
+    }
+  } catch (err) {
+    console.error("Could not read store status from DB:", err);
+  }
+  res.json({ closed: !!storeClosed });
 });
 
 // change status (admin)
-app.post("/store-status",(req,res)=>{storeClosed=req.body.closed;
-    console.log("STORE STATUS:",storeClosed ?
-        "CLOSED":"open");
-        res.json({status:"ok"});
-    });
+app.post("/store-status", async (req, res) => {
+  if (typeof req.body?.closed !== "boolean") {
+    return res.status(400).json({ status: "error", message: "closed must be true/false" });
+  }
+  try {
+    const persistedClosed = await persistStoreClosed(req.body.closed);
+    storeClosed = persistedClosed;
+    console.log("STORE STATUS:", storeClosed ? "CLOSED" : "open");
+    return res.json({ status: "ok", closed: storeClosed });
+  } catch (err) {
+    console.error("Store status save failed:", err);
+    return res.status(500).json({ status: "error", message: "Could not save store status" });
+  }
+});
     
 
 const PORT = process.env.PORT || 5000;
