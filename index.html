@@ -288,6 +288,7 @@ input:focus, select:focus {
 
   <div id="deliveryNote" class="deliveryNote">Delivery Charges: Rs 0 (Self Pickup)</div>
   <div id="paymentFlowNote" class="deliveryNote" style="color:#c24d00;"></div>
+  <div id="deliveryUnavailableNote" class="deliveryNote" style="color:#d9534f;"></div>
 </div>
 
 <div class="container">
@@ -426,6 +427,10 @@ input:focus, select:focus {
     <button onclick="saveStock()">Save Stock</button>
     <button onclick="showReport()">Today Report</button>
     <button onclick="toggleStore()">Open/Close</button>
+    <button onclick="toggleRoomDeliveryAvailability()">Room Delivery ON/OFF</button>
+    <button onclick="toggleAutoClose1230()">Auto Close 12:30 AM ON/OFF</button>
+    <div id="deliveryStatusAdmin" style="margin-top:6px;font-size:12px;color:#a94442;">Room Delivery: Available</div>
+    <div id="autoCloseStatusAdmin" style="margin-top:4px;font-size:12px;color:#6f42c1;">Auto Close 12:30 AM: OFF</div>
 
     <hr>
     <button onclick="loadOrders()">Show Live Orders</button>
@@ -519,6 +524,9 @@ const DEPLOYED_API_BASE = "https://happy-store-zxir.onrender.com";
 let cart = [];
 let stockData = {};
 let storeClosed = false;
+let roomDeliveryBlocked = false;
+let autoCloseAt1230Enabled = false;
+let autoCloseLastRunDate = "";
 let orderCounter = parseInt(localStorage.getItem("orderNo") || "1001", 10);
 let lastSeenOrderId = null;
 let lastSeenOrderCount = 0;
@@ -1047,6 +1055,20 @@ async function updateStoreStatus() {
     if (!res.ok) throw new Error("store-status failed");
     const data = await safeJson(res);
     storeClosed = !!data.closed;
+    roomDeliveryBlocked = !!data.roomDeliveryBlocked;
+    autoCloseAt1230Enabled = !!data.autoCloseAt1230Enabled;
+    autoCloseLastRunDate = String(data.autoCloseLastRunDate || "");
+    renderDeliveryNote();
+    const adminDeliveryStatus = getById("deliveryStatusAdmin");
+    if (adminDeliveryStatus) {
+      adminDeliveryStatus.innerText = roomDeliveryBlocked ? "Room Delivery: Not Possible Now" : "Room Delivery: Available";
+    }
+    const autoCloseStatusAdmin = getById("autoCloseStatusAdmin");
+    if (autoCloseStatusAdmin) {
+      autoCloseStatusAdmin.innerText = autoCloseAt1230Enabled
+        ? `Auto Close 12:30 AM: ON${autoCloseLastRunDate ? ` (Last: ${autoCloseLastRunDate})` : ""}`
+        : "Auto Close 12:30 AM: OFF";
+    }
   } catch (err) {
     console.log("Could not fetch store status:", err);
   }
@@ -1419,7 +1441,18 @@ function getOrderRoutingByRoom(roomNo) {
 
 function renderDeliveryNote() {
   const rawMode = String(getById("mode").value || "").toLowerCase().trim();
-  const mode = rawMode === "delivery" ? "delivery" : "pickup";
+  let mode = rawMode === "delivery" ? "delivery" : "pickup";
+  const modeSelect = getById("mode");
+  const deliveryOption = modeSelect ? modeSelect.querySelector('option[value="delivery"]') : null;
+  const deliveryUnavailableNote = getById("deliveryUnavailableNote");
+  if (deliveryOption) {
+    deliveryOption.disabled = !!roomDeliveryBlocked;
+    deliveryOption.textContent = roomDeliveryBlocked ? "Room Delivery (Not Available Now)" : "Room Delivery";
+  }
+  if (roomDeliveryBlocked && mode === "delivery") {
+    mode = "pickup";
+    if (modeSelect) modeSelect.value = "pickup";
+  }
   const charge = getDeliveryCharge(mode);
   const paymentFlowNote = getById("paymentFlowNote");
   getById("deliveryNote").innerText =
@@ -1428,6 +1461,9 @@ function renderDeliveryNote() {
       : `Delivery Charges: Rs ${charge} (Room Delivery)`;
   if (paymentFlowNote) {
     paymentFlowNote.innerText = mode === "delivery" ? "Order will be placed after payment." : "";
+  }
+  if (deliveryUnavailableNote) {
+    deliveryUnavailableNote.innerText = roomDeliveryBlocked ? "Room delivery is not possible at this time." : "";
   }
 }
 
@@ -1489,6 +1525,11 @@ async function placeOrder() {
   const mode = getById("mode").value;
   const paymentMode = getById("paymentMode").value;
   hidePaymentManualLink();
+
+  if (mode === "delivery" && roomDeliveryBlocked) {
+    alert("Room delivery is not possible at this time. Please select Self Pickup.");
+    return;
+  }
 
   if (!/^[A-Za-z ]+$/.test(name)) return alert("Invalid name");
   if (!/^[0-9]{3}$/.test(room)) return alert("Room must be exactly 3 digits");
@@ -2393,6 +2434,54 @@ async function resetProfitTotals() {
       return;
     }
     alert(`Could not reset profit: ${msg}`);
+  }
+}
+
+async function toggleRoomDeliveryAvailability() {
+  try {
+    const nextBlocked = !roomDeliveryBlocked;
+    const res = await apiFetch("/delivery-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomDeliveryBlocked: nextBlocked })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "ok") throw new Error(data.message || "Delivery status update failed");
+    roomDeliveryBlocked = !!data.roomDeliveryBlocked;
+    renderDeliveryNote();
+    const adminDeliveryStatus = getById("deliveryStatusAdmin");
+    if (adminDeliveryStatus) {
+      adminDeliveryStatus.innerText = roomDeliveryBlocked ? "Room Delivery: Not Possible Now" : "Room Delivery: Available";
+    }
+    alert(roomDeliveryBlocked ? "Room Delivery marked NOT possible now" : "Room Delivery marked AVAILABLE");
+  } catch (err) {
+    console.error(err);
+    alert(`Could not update room delivery status: ${err.message || "Unknown error"}`);
+  }
+}
+
+async function toggleAutoClose1230() {
+  try {
+    const nextEnabled = !autoCloseAt1230Enabled;
+    const res = await apiFetch("/auto-close-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autoCloseAt1230Enabled: nextEnabled })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "ok") throw new Error(data.message || "Auto-close update failed");
+    autoCloseAt1230Enabled = !!data.autoCloseAt1230Enabled;
+    autoCloseLastRunDate = String(data.autoCloseLastRunDate || "");
+    const autoCloseStatusAdmin = getById("autoCloseStatusAdmin");
+    if (autoCloseStatusAdmin) {
+      autoCloseStatusAdmin.innerText = autoCloseAt1230Enabled
+        ? `Auto Close 12:30 AM: ON${autoCloseLastRunDate ? ` (Last: ${autoCloseLastRunDate})` : ""}`
+        : "Auto Close 12:30 AM: OFF";
+    }
+    alert(autoCloseAt1230Enabled ? "Auto Close 12:30 AM enabled" : "Auto Close 12:30 AM disabled");
+  } catch (err) {
+    console.error(err);
+    alert(`Could not update auto-close setting: ${err.message || "Unknown error"}`);
   }
 }
 

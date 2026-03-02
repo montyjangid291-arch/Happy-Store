@@ -138,6 +138,9 @@ const StoreStateSchema = new mongoose.Schema(
     sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
     distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
     storeClosed: { type: Boolean, default: false },
+    roomDeliveryBlocked: { type: Boolean, default: false },
+    autoCloseAt1230Enabled: { type: Boolean, default: false },
+    autoCloseLastRunDate: { type: String, default: "" },
   },
   { timestamps: true }
 );
@@ -154,6 +157,9 @@ let buyPrice = { ...defaultBuyPrice };
 let sellPrice = { ...defaultSellPrice };
 let distributorStock = normalizeDistributorStock(defaultDistributorStock);
 let storeClosed = false;
+let roomDeliveryBlocked = false;
+let autoCloseAt1230Enabled = false;
+let autoCloseLastRunDate = "";
 let initPromise = null;
 
 function mergeProductMap(baseMap, incomingMap, fallbackValue = 0) {
@@ -183,6 +189,9 @@ function saveData() {
       sellPrice,
       distributorStock,
       storeClosed,
+      roomDeliveryBlocked,
+      autoCloseAt1230Enabled,
+      autoCloseLastRunDate,
     },
     { upsert: true, setDefaultsOnInsert: true, new: true }
   ).catch((err) => {
@@ -205,6 +214,9 @@ async function loadStateFromMongo() {
       sellPrice,
       distributorStock,
       storeClosed,
+      roomDeliveryBlocked,
+      autoCloseAt1230Enabled,
+      autoCloseLastRunDate,
     });
     return;
   }
@@ -219,6 +231,9 @@ async function loadStateFromMongo() {
   sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
   distributorStock = normalizeDistributorStock(doc.distributorStock);
   storeClosed = !!doc.storeClosed;
+  roomDeliveryBlocked = !!doc.roomDeliveryBlocked;
+  autoCloseAt1230Enabled = !!doc.autoCloseAt1230Enabled;
+  autoCloseLastRunDate = String(doc.autoCloseLastRunDate || "");
 }
 
 async function initDatabase() {
@@ -238,6 +253,7 @@ async function initDatabase() {
 app.use(async (req, res, next) => {
   try {
     await initDatabase();
+    maybeRunAutoClose1230();
     next();
   } catch (err) {
     console.error("Database init failed:", err);
@@ -381,6 +397,41 @@ function formatOrderDisplayTime(date) {
   }).format(date);
 }
 
+function getIstParts(date = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(date);
+  const byType = {};
+  parts.forEach((p) => {
+    if (p.type !== "literal") byType[p.type] = p.value;
+  });
+  return {
+    dateKey: `${byType.year}-${byType.month}-${byType.day}`,
+    hour: Number(byType.hour) || 0,
+    minute: Number(byType.minute) || 0,
+  };
+}
+
+function maybeRunAutoClose1230() {
+  if (!autoCloseAt1230Enabled) return;
+  const nowIst = getIstParts(new Date());
+  const crossed1230 = nowIst.hour > 0 || (nowIst.hour === 0 && nowIst.minute >= 30);
+  if (!crossed1230) return;
+  if (autoCloseLastRunDate === nowIst.dateKey) return;
+
+  storeClosed = true;
+  autoCloseLastRunDate = nowIst.dateKey;
+  saveData();
+  console.log(`AUTO CLOSE 12:30 AM applied for ${nowIst.dateKey} (IST)`);
+}
+
 function getOrderDate(order) {
   if (order.createdAt) {
     const dt = new Date(order.createdAt);
@@ -422,10 +473,17 @@ function applyMonthlyManualCustomers(spendMap, month) {
   });
 }
 
-async function readStoreClosedFromDb() {
-  const doc = await StoreState.findOne({ singletonKey: "main" }).select({ storeClosed: 1 }).lean();
+async function readStoreFlagsFromDb() {
+  const doc = await StoreState.findOne({ singletonKey: "main" })
+    .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1 })
+    .lean();
   if (!doc) return null;
-  return !!doc.storeClosed;
+  return {
+    storeClosed: !!doc.storeClosed,
+    roomDeliveryBlocked: !!doc.roomDeliveryBlocked,
+    autoCloseAt1230Enabled: !!doc.autoCloseAt1230Enabled,
+    autoCloseLastRunDate: String(doc.autoCloseLastRunDate || ""),
+  };
 }
 
 async function persistStoreClosed(nextClosed) {
@@ -599,6 +657,12 @@ app.post("/order", async (req, res) => {
     return res.status(400).json({ status: "error", message: "Invalid order" });
   }
 
+  const normalizedMode = String(order.mode || "").toLowerCase().trim() === "delivery" ? "delivery" : "pickup";
+  if (normalizedMode === "delivery" && roomDeliveryBlocked) {
+    return res.status(400).json({ status: "delivery_blocked", message: "Room delivery is not possible at this time" });
+  }
+  order.mode = normalizedMode;
+
   let itemsSubTotal = 0;
   const distributorRoom = getDistributorRoomByCustomerRoom(order.room);
   if (!distributorStock[distributorRoom]) {
@@ -622,8 +686,6 @@ app.post("/order", async (req, res) => {
     }
     distributorStock[distributorRoom][i.name] -= i.qty;
   });
-  const normalizedMode = String(order.mode || "").toLowerCase().trim() === "delivery" ? "delivery" : "pickup";
-  order.mode = normalizedMode;
   const deliveryCharge = normalizedMode === "delivery" ? 10 : 0;
   order.deliveryCharge = deliveryCharge;
   order.total = itemsSubTotal + deliveryCharge;
@@ -1348,14 +1410,23 @@ app.get("/distributor-month-summary", (req, res) => {
 // get status 
 app.get("/store-status", async (req, res) => {
   try {
-    const closedFromDb = await readStoreClosedFromDb();
-    if (closedFromDb !== null) {
-      storeClosed = closedFromDb;
+    maybeRunAutoClose1230();
+    const flags = await readStoreFlagsFromDb();
+    if (flags) {
+      storeClosed = !!flags.storeClosed;
+      roomDeliveryBlocked = !!flags.roomDeliveryBlocked;
+      autoCloseAt1230Enabled = !!flags.autoCloseAt1230Enabled;
+      autoCloseLastRunDate = String(flags.autoCloseLastRunDate || "");
     }
   } catch (err) {
     console.error("Could not read store status from DB:", err);
   }
-  res.json({ closed: !!storeClosed });
+  res.json({
+    closed: !!storeClosed,
+    roomDeliveryBlocked: !!roomDeliveryBlocked,
+    autoCloseAt1230Enabled: !!autoCloseAt1230Enabled,
+    autoCloseLastRunDate: String(autoCloseLastRunDate || ""),
+  });
 });
 
 // change status (admin)
@@ -1373,6 +1444,39 @@ app.post("/store-status", async (req, res) => {
     return res.status(500).json({ status: "error", message: "Could not save store status" });
   }
 });
+
+app.get("/auto-close-status", (req, res) => {
+  return res.json({
+    autoCloseAt1230Enabled: !!autoCloseAt1230Enabled,
+    autoCloseLastRunDate: String(autoCloseLastRunDate || ""),
+  });
+});
+
+app.post("/auto-close-status", (req, res) => {
+  if (typeof req.body?.autoCloseAt1230Enabled !== "boolean") {
+    return res.status(400).json({ status: "error", message: "autoCloseAt1230Enabled must be true/false" });
+  }
+  autoCloseAt1230Enabled = !!req.body.autoCloseAt1230Enabled;
+  saveData();
+  return res.json({
+    status: "ok",
+    autoCloseAt1230Enabled,
+    autoCloseLastRunDate: String(autoCloseLastRunDate || ""),
+  });
+});
+
+app.get("/delivery-status", (req, res) => {
+  res.json({ roomDeliveryBlocked: !!roomDeliveryBlocked });
+});
+
+app.post("/delivery-status", (req, res) => {
+  if (typeof req.body?.roomDeliveryBlocked !== "boolean") {
+    return res.status(400).json({ status: "error", message: "roomDeliveryBlocked must be true/false" });
+  }
+  roomDeliveryBlocked = !!req.body.roomDeliveryBlocked;
+  saveData();
+  return res.json({ status: "ok", roomDeliveryBlocked });
+});
     
 
 const PORT = process.env.PORT || 5000;
@@ -1382,6 +1486,13 @@ initDatabase()
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
+    setInterval(() => {
+      try {
+        maybeRunAutoClose1230();
+      } catch (err) {
+        console.error("Auto-close scheduler error:", err);
+      }
+    }, 30000);
   })
   .catch((err) => {
     console.error("Failed to start server:", err);
