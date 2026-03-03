@@ -146,6 +146,7 @@ const StoreStateSchema = new mongoose.Schema(
     autoCloseAt1230Enabled: { type: Boolean, default: false },
     autoCloseLastRunDate: { type: String, default: "" },
     closingSoonAlertEnabled: { type: Boolean, default: false },
+    sleepingCallAlertEnabled: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -166,6 +167,7 @@ let roomDeliveryBlocked = false;
 let autoCloseAt1230Enabled = false;
 let autoCloseLastRunDate = "";
 let closingSoonAlertEnabled = false;
+let sleepingCallAlertEnabled = false;
 let initPromise = null;
 
 function mergeProductMap(baseMap, incomingMap, fallbackValue = 0) {
@@ -199,6 +201,7 @@ function saveData() {
       autoCloseAt1230Enabled,
       autoCloseLastRunDate,
       closingSoonAlertEnabled,
+      sleepingCallAlertEnabled,
     },
     { upsert: true, setDefaultsOnInsert: true, new: true }
   ).catch((err) => {
@@ -225,6 +228,7 @@ async function loadStateFromMongo() {
       autoCloseAt1230Enabled,
       autoCloseLastRunDate,
       closingSoonAlertEnabled,
+      sleepingCallAlertEnabled,
     });
     return;
   }
@@ -243,6 +247,7 @@ async function loadStateFromMongo() {
   autoCloseAt1230Enabled = !!doc.autoCloseAt1230Enabled;
   autoCloseLastRunDate = String(doc.autoCloseLastRunDate || "");
   closingSoonAlertEnabled = !!doc.closingSoonAlertEnabled;
+  sleepingCallAlertEnabled = !!doc.sleepingCallAlertEnabled;
 }
 
 async function initDatabase() {
@@ -484,7 +489,7 @@ function applyMonthlyManualCustomers(spendMap, month) {
 
 async function readStoreFlagsFromDb() {
   const doc = await StoreState.findOne({ singletonKey: "main" })
-    .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1, closingSoonAlertEnabled: 1 })
+    .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1, closingSoonAlertEnabled: 1, sleepingCallAlertEnabled: 1 })
     .lean();
   if (!doc) return null;
   return {
@@ -493,6 +498,7 @@ async function readStoreFlagsFromDb() {
     autoCloseAt1230Enabled: !!doc.autoCloseAt1230Enabled,
     autoCloseLastRunDate: String(doc.autoCloseLastRunDate || ""),
     closingSoonAlertEnabled: !!doc.closingSoonAlertEnabled,
+    sleepingCallAlertEnabled: !!doc.sleepingCallAlertEnabled,
   };
 }
 
@@ -1428,6 +1434,7 @@ app.get("/store-status", async (req, res) => {
       autoCloseAt1230Enabled = !!flags.autoCloseAt1230Enabled;
       autoCloseLastRunDate = String(flags.autoCloseLastRunDate || "");
       closingSoonAlertEnabled = !!flags.closingSoonAlertEnabled;
+      sleepingCallAlertEnabled = !!flags.sleepingCallAlertEnabled;
     }
   } catch (err) {
     console.error("Could not read store status from DB:", err);
@@ -1438,6 +1445,7 @@ app.get("/store-status", async (req, res) => {
     autoCloseAt1230Enabled: !!autoCloseAt1230Enabled,
     autoCloseLastRunDate: String(autoCloseLastRunDate || ""),
     closingSoonAlertEnabled: !!closingSoonAlertEnabled,
+    sleepingCallAlertEnabled: !!sleepingCallAlertEnabled,
   });
 });
 
@@ -1488,6 +1496,19 @@ app.post("/closing-alert-status", (req, res) => {
   closingSoonAlertEnabled = !!req.body.closingSoonAlertEnabled;
   saveData();
   return res.json({ status: "ok", closingSoonAlertEnabled });
+});
+
+app.get("/sleeping-alert-status", (req, res) => {
+  return res.json({ sleepingCallAlertEnabled: !!sleepingCallAlertEnabled });
+});
+
+app.post("/sleeping-alert-status", (req, res) => {
+  if (typeof req.body?.sleepingCallAlertEnabled !== "boolean") {
+    return res.status(400).json({ status: "error", message: "sleepingCallAlertEnabled must be true/false" });
+  }
+  sleepingCallAlertEnabled = !!req.body.sleepingCallAlertEnabled;
+  saveData();
+  return res.json({ status: "ok", sleepingCallAlertEnabled });
 });
 
 app.get("/delivery-status", (req, res) => {
