@@ -237,6 +237,20 @@ input:focus, select:focus {
 .floorMeta { font-size: 12px; color: #56685e; margin-bottom: 8px; }
 .floorOrdersList { max-height: 72vh; overflow-y: auto; padding-right: 4px; }
 .stockEditorRow { margin-bottom: 6px; }
+.adminStockActionGrid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; align-items: start; }
+.adminStockCol, .adminActionCol { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fbfdff; }
+.adminActionBtn {
+  width: 100%;
+  margin: 0 0 8px 0;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2f5aa8, #2a86c9);
+  box-shadow: 0 8px 14px rgba(33, 85, 148, 0.24);
+}
 .priceGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .priceCol { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: #fafdf8; }
 .priceCol h4 { margin: 0 0 8px 0; }
@@ -277,6 +291,7 @@ input:focus, select:focus {
 }
 @media (max-width: 768px) {
   header { font-size: 21px; }
+  .adminStockActionGrid { grid-template-columns: 1fr; }
   .priceGrid { grid-template-columns: 1fr; }
   .distGrid { grid-template-columns: 1fr; }
   .container { padding: 12px; gap: 12px; }
@@ -514,28 +529,33 @@ input:focus, select:focus {
     <div style="margin-top:8px;">This Device ID: <b id="deviceIdBox">-</b></div>
     <div id="ordersList"></div>
 
-    <h4 style="margin:10px 0 6px 0;">Stock Add Entry (+/-)</h4>
-    <div class="stockEditorRow">Maggi <input id="sMaggi" type="number"></div>
-    <div class="stockEditorRow">Kurkure <input id="sKurkure" type="number"></div>
-    <div class="stockEditorRow">Bhujia <input id="sBhujia" type="number"></div>
-    <div class="stockEditorRow">Namkeen <input id="sNamkeen" type="number"></div>
-    <div class="stockEditorRow">Bhoot Chips <input id="sBhootChips" type="number"></div>
-    <div class="stockEditorRow">Onion Chips <input id="sOnionChips" type="number"></div>
-    <div class="stockEditorRow">Tomato Chips <input id="sTomatoChips" type="number"></div>
-    <div class="stockEditorRow">Unibic Chocolate Chip Cookies <input id="sUnibicCookies" type="number"></div>
-    <div class="stockEditorRow">Unibic Kesar Cashew Badam Cookies <input id="sUnibicKesarCashewBadamCookies" type="number"></div>
-
-    <button onclick="saveStock()">Save Stock</button>
-    <button onclick="showReport()">Today Report</button>
-    <button onclick="toggleStore()">Open/Close</button>
-    <button onclick="toggleRoomDeliveryAvailability()">Room Delivery ON/OFF</button>
-    <button onclick="toggleAutoClose1230()">Auto Close 12:30 AM ON/OFF</button>
-    <button onclick="toggleClosingSoonAlert()">Store Closing Soon Alert ON/OFF</button>
-    <button onclick="toggleSleepingCallAlert()">Sleeping Call Alert ON/OFF</button>
-    <div id="deliveryStatusAdmin" style="margin-top:6px;font-size:12px;color:#a94442;">Room Delivery: Available</div>
-    <div id="autoCloseStatusAdmin" style="margin-top:4px;font-size:12px;color:#6f42c1;">Auto Close 12:30 AM: OFF</div>
-    <div id="closingSoonStatusAdmin" style="margin-top:4px;font-size:12px;color:#6b4f00;">Closing Soon Alert: OFF</div>
-    <div id="sleepingCallStatusAdmin" style="margin-top:4px;font-size:12px;color:#7f1d1d;">Sleeping Call Alert: OFF</div>
+    <div class="adminStockActionGrid">
+      <div class="adminStockCol">
+        <h4 style="margin:0 0 8px 0;">Stock Add Entry (+/-)</h4>
+        <div class="stockEditorRow">Maggi <input id="sMaggi" type="number"></div>
+        <div class="stockEditorRow">Kurkure <input id="sKurkure" type="number"></div>
+        <div class="stockEditorRow">Bhujia <input id="sBhujia" type="number"></div>
+        <div class="stockEditorRow">Namkeen <input id="sNamkeen" type="number"></div>
+        <div class="stockEditorRow">Bhoot Chips <input id="sBhootChips" type="number"></div>
+        <div class="stockEditorRow">Onion Chips <input id="sOnionChips" type="number"></div>
+        <div class="stockEditorRow">Tomato Chips <input id="sTomatoChips" type="number"></div>
+        <div class="stockEditorRow">Unibic Chocolate Chip Cookies <input id="sUnibicCookies" type="number"></div>
+        <div class="stockEditorRow">Unibic Kesar Cashew Badam Cookies <input id="sUnibicKesarCashewBadamCookies" type="number"></div>
+      </div>
+      <div class="adminActionCol">
+        <button class="adminActionBtn" onclick="saveStock()">Save Stock</button>
+        <button class="adminActionBtn" onclick="showReport()">Today Report</button>
+        <button class="adminActionBtn" onclick="toggleStore()">Open/Close</button>
+        <button class="adminActionBtn" onclick="toggleRoomDeliveryAvailability()">Room Delivery ON/OFF</button>
+        <button class="adminActionBtn" onclick="toggleAutoClose1230()">Auto Close 12:30 AM ON/OFF</button>
+        <button class="adminActionBtn" onclick="toggleClosingSoonAlert()">Store Closing Soon Alert ON/OFF</button>
+        <button class="adminActionBtn" onclick="toggleSleepingCallAlert()">Sleeping Call Alert ON/OFF</button>
+        <div id="deliveryStatusAdmin" style="margin-top:6px;font-size:12px;color:#a94442;">Room Delivery: Available</div>
+        <div id="autoCloseStatusAdmin" style="margin-top:4px;font-size:12px;color:#6f42c1;">Auto Close 12:30 AM: OFF</div>
+        <div id="closingSoonStatusAdmin" style="margin-top:4px;font-size:12px;color:#6b4f00;">Closing Soon Alert: OFF</div>
+        <div id="sleepingCallStatusAdmin" style="margin-top:4px;font-size:12px;color:#7f1d1d;">Sleeping Call Alert: OFF</div>
+      </div>
+    </div>
 
     <hr>
     <button onclick="loadOrders()">Show Live Orders</button>
