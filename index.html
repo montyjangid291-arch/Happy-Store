@@ -2895,6 +2895,8 @@ getById("roomNo").addEventListener("input", (e) => {
 });
 getById("deviceIdBox").innerText = getOrCreateDeviceId();
 getById("storeHeader").addEventListener("click", registerSecretAdminTap);
+getById("closedOverlay").addEventListener("click", registerSecretAdminTap);
+getById("closedOverlay").addEventListener("touchstart", registerSecretAdminTap, { passive: true });
 document.addEventListener("keydown", (e) => {
   if (e.ctrlKey && e.shiftKey && String(e.key || "").toLowerCase() === "a") {
     showAdmin();
