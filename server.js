@@ -15,6 +15,7 @@ const defaultStock = {
   Namkeen: 2,
   "Bhoot Chips": 5,
   "Onion Chips": 5,
+  "Tomato Chips": 5,
   "Unibic Chocolate Chip Cookies": 5,
   "Unibic Kesar Cashew Badam Cookies": 5,
 };
@@ -26,6 +27,7 @@ const defaultBuyPrice = {
   Namkeen: 0,
   "Bhoot Chips": 0,
   "Onion Chips": 0,
+  "Tomato Chips": 0,
   "Unibic Chocolate Chip Cookies": 0,
   "Unibic Kesar Cashew Badam Cookies": 0,
 };
@@ -37,6 +39,7 @@ const defaultSellPrice = {
   Namkeen: 50,
   "Bhoot Chips": 20,
   "Onion Chips": 30,
+  "Tomato Chips": 30,
   "Unibic Chocolate Chip Cookies": 30,
   "Unibic Kesar Cashew Badam Cookies": 60,
 };
@@ -54,6 +57,7 @@ function getDefaultProductMap(fillValue) {
     Namkeen: fillValue,
     "Bhoot Chips": fillValue,
     "Onion Chips": fillValue,
+    "Tomato Chips": fillValue,
     "Unibic Chocolate Chip Cookies": fillValue,
     "Unibic Kesar Cashew Badam Cookies": fillValue,
   };

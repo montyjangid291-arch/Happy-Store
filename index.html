@@ -335,6 +335,16 @@ input:focus, select:focus {
     <button class="btn" onclick="addToCart(this, 30, 'qty7')">Add</button>
   </div>
 
+  <div class="card" data-name="Tomato Chips">
+    <img src="tomato-chips.jfif" alt="Tomato Chips">
+    <h3>Tomato Chips</h3>
+    <div class="weight">80g Pack</div>
+    <div class="price">Rs 30</div>
+    <div class="stock"></div>
+    <input type="number" id="qty11" value="1" min="1"><br>
+    <button class="btn" onclick="addToCart(this, 30, 'qty11')">Add</button>
+  </div>
+
   <div class="card" data-name="Unibic Chocolate Chip Cookies">
     <img src="unibic.jpg" alt="Unibic Chocolate Chip Cookies">
     <h3>Unibic Chocolate Chip Cookies</h3>
@@ -424,6 +434,7 @@ input:focus, select:focus {
     <div class="stockEditorRow">Namkeen <input id="sNamkeen" type="number"></div>
     <div class="stockEditorRow">Bhoot Chips <input id="sBhootChips" type="number"></div>
     <div class="stockEditorRow">Onion Chips <input id="sOnionChips" type="number"></div>
+    <div class="stockEditorRow">Tomato Chips <input id="sTomatoChips" type="number"></div>
     <div class="stockEditorRow">Unibic Chocolate Chip Cookies <input id="sUnibicCookies" type="number"></div>
     <div class="stockEditorRow">Unibic Kesar Cashew Badam Cookies <input id="sUnibicKesarCashewBadamCookies" type="number"></div>
 
@@ -473,6 +484,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Namkeen Buy Rs <input id="bNamkeen" type="number"></div>
         <div class="stockEditorRow">Bhoot Chips Buy Rs <input id="bBhootChips" type="number"></div>
         <div class="stockEditorRow">Onion Chips Buy Rs <input id="bOnionChips" type="number"></div>
+        <div class="stockEditorRow">Tomato Chips Buy Rs <input id="bTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Cookies Buy Rs <input id="bUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Buy Rs <input id="bUnibicKesarCashewBadamCookies" type="number"></div>
         <button onclick="saveBuyPrice()">Save Buy Price</button>
@@ -485,6 +497,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Namkeen Sell Rs <input id="spNamkeen" type="number"></div>
         <div class="stockEditorRow">Bhoot Chips Sell Rs <input id="spBhootChips" type="number"></div>
         <div class="stockEditorRow">Onion Chips Sell Rs <input id="spOnionChips" type="number"></div>
+        <div class="stockEditorRow">Tomato Chips Sell Rs <input id="spTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Cookies Sell Rs <input id="spUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Sell Rs <input id="spUnibicKesarCashewBadamCookies" type="number"></div>
         <button onclick="saveSellPrice()">Save Sell Price</button>
@@ -518,6 +531,7 @@ let realPrice = {
   Namkeen: 50,
   "Bhoot Chips": 20,
   "Onion Chips": 30,
+  "Tomato Chips": 30,
   "Unibic Chocolate Chip Cookies": 30,
   "Unibic Kesar Cashew Badam Cookies": 60
 };
@@ -1670,6 +1684,7 @@ async function saveStock() {
     Namkeen: +getById("sNamkeen").value,
     "Bhoot Chips": +getById("sBhootChips").value,
     "Onion Chips": +getById("sOnionChips").value,
+    "Tomato Chips": +getById("sTomatoChips").value,
     "Unibic Chocolate Chip Cookies": +getById("sUnibicCookies").value,
     "Unibic Kesar Cashew Badam Cookies": +getById("sUnibicKesarCashewBadamCookies").value
   };
@@ -1727,6 +1742,7 @@ async function loadBuyPriceFromServer() {
     getById("bNamkeen").value = Number(buy.Namkeen || 0);
     getById("bBhootChips").value = Number(buy["Bhoot Chips"] || 0);
     getById("bOnionChips").value = Number(buy["Onion Chips"] || 0);
+    getById("bTomatoChips").value = Number(buy["Tomato Chips"] || 0);
     getById("bUnibicCookies").value = Number(buy["Unibic Chocolate Chip Cookies"] || 0);
     getById("bUnibicKesarCashewBadamCookies").value = Number(buy["Unibic Kesar Cashew Badam Cookies"] || 0);
   } catch (err) {
@@ -1763,6 +1779,7 @@ async function loadSellPriceFromServer() {
       Namkeen: pick("Namkeen", Number(realPrice.Namkeen || 50)),
       "Bhoot Chips": pick("Bhoot Chips", Number(realPrice["Bhoot Chips"] || 20)),
       "Onion Chips": pick("Onion Chips", Number(realPrice["Onion Chips"] || 30)),
+      "Tomato Chips": pick("Tomato Chips", Number(realPrice["Tomato Chips"] || 30)),
       "Unibic Chocolate Chip Cookies": pick("Unibic Chocolate Chip Cookies", Number(realPrice["Unibic Chocolate Chip Cookies"] || 30)),
       "Unibic Kesar Cashew Badam Cookies": pick("Unibic Kesar Cashew Badam Cookies", Number(realPrice["Unibic Kesar Cashew Badam Cookies"] || 60))
     };
@@ -1773,6 +1790,7 @@ async function loadSellPriceFromServer() {
     getById("spNamkeen").value = Number(realPrice.Namkeen || 0);
     getById("spBhootChips").value = Number(realPrice["Bhoot Chips"] || 0);
     getById("spOnionChips").value = Number(realPrice["Onion Chips"] || 0);
+    getById("spTomatoChips").value = Number(realPrice["Tomato Chips"] || 0);
     getById("spUnibicCookies").value = Number(realPrice["Unibic Chocolate Chip Cookies"] || 0);
     getById("spUnibicKesarCashewBadamCookies").value = Number(realPrice["Unibic Kesar Cashew Badam Cookies"] || 0);
 
@@ -1792,6 +1810,7 @@ async function saveBuyPrice() {
     Namkeen: +getById("bNamkeen").value,
     "Bhoot Chips": +getById("bBhootChips").value,
     "Onion Chips": +getById("bOnionChips").value,
+    "Tomato Chips": +getById("bTomatoChips").value,
     "Unibic Chocolate Chip Cookies": +getById("bUnibicCookies").value,
     "Unibic Kesar Cashew Badam Cookies": +getById("bUnibicKesarCashewBadamCookies").value
   };
@@ -1821,6 +1840,7 @@ async function saveSellPrice() {
     Namkeen: +getById("spNamkeen").value,
     "Bhoot Chips": +getById("spBhootChips").value,
     "Onion Chips": +getById("spOnionChips").value,
+    "Tomato Chips": +getById("spTomatoChips").value,
     "Unibic Chocolate Chip Cookies": +getById("spUnibicCookies").value,
     "Unibic Kesar Cashew Badam Cookies": +getById("spUnibicKesarCashewBadamCookies").value
   };
