@@ -163,6 +163,8 @@ header {
   background: #fff;
   padding: 15px;
   font-family: monospace;
+  color: #000;
+  font-weight: 800;
   width: 280px;
   border: 1px solid #000;
 }
@@ -664,7 +666,19 @@ function triggerBillDownload(dataUrl, fileName) {
   }
 }
 
-function buildTextBillDataUrl(text) {
+function formatBillDateTime(date = new Date()) {
+  return new Intl.DateTimeFormat("en-IN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  }).format(date);
+}
+
+function buildTextBillDataUrl(text, billDateTime) {
   const canvas = document.createElement("canvas");
   const width = 1000;
   const paddingX = 50;
@@ -674,7 +688,7 @@ function buildTextBillDataUrl(text) {
   const ctx = canvas.getContext("2d");
 
   const rawLines = String(text || "").replace(/\r/g, "").split("\n");
-  const bodyFont = "46px 'Courier New', monospace";
+  const bodyFont = "bold 46px 'Courier New', monospace";
   ctx.font = bodyFont;
 
   const renderedLines = [];
@@ -700,8 +714,8 @@ function buildTextBillDataUrl(text) {
 
   const lineHeight = 58;
   const titleY = 92;
-  const topHrY = 130;
-  const bodyStartY = 190;
+  const topHrY = 150;
+  const bodyStartY = 210;
   const bodyHeight = renderedLines.length * lineHeight;
   const bottomHrY = bodyStartY + bodyHeight + 16;
   const thankYouY = bottomHrY + 62;
@@ -723,9 +737,12 @@ function buildTextBillDataUrl(text) {
   ctx.textBaseline = "alphabetic";
   ctx.font = "bold 56px 'Courier New', monospace";
   ctx.fillText("HOSTEL STORE", width / 2, titleY);
+  ctx.textAlign = "right";
+  ctx.font = "bold 30px 'Courier New', monospace";
+  ctx.fillText(`Date & Time: ${String(billDateTime || formatBillDateTime())}`, width - paddingX, 52);
 
   // Horizontal separators
-  ctx.strokeStyle = "#7c7c7c";
+  ctx.strokeStyle = "#000000";
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(paddingX, topHrY);
@@ -754,8 +771,8 @@ function buildTextBillDataUrl(text) {
   return canvas.toDataURL("image/png");
 }
 
-function generateTextBillFallback(text, orderNo) {
-  const dataUrl = buildTextBillDataUrl(text);
+function generateTextBillFallback(text, orderNo, billDateTime) {
+  const dataUrl = buildTextBillDataUrl(text, billDateTime || formatBillDateTime());
   triggerBillDownload(dataUrl, `bill-${orderNo}.png`);
 }
 
@@ -1521,13 +1538,17 @@ function isMobileDevice() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
 }
 
-async function generateBillImage(text, orderNo) {
+async function generateBillImage(text, orderNo, billDateTime) {
   const clean = text.replace(/\n/g, "<br>");
   const fileName = `bill-${orderNo}.png`;
   const billBox = getById("billBox");
 
   try {
-    getById("billContent").innerHTML = clean;
+    const rightDateTime = escapeHtml(String(billDateTime || formatBillDateTime()));
+    getById("billContent").innerHTML = `
+      <div style="text-align:right;color:#000;font-weight:800;">Date &amp; Time: ${rightDateTime}</div>
+      <div style="color:#000;font-weight:800;">${clean}</div>
+    `;
     billBox.style.position = "fixed";
     billBox.style.top = "50%";
     billBox.style.left = "50%";
@@ -1551,7 +1572,7 @@ async function generateBillImage(text, orderNo) {
     }
   } catch (err) {
     console.warn("html2canvas bill failed, using fallback:", err);
-    generateTextBillFallback(text, orderNo);
+    generateTextBillFallback(text, orderNo, billDateTime);
   } finally {
     billBox.style.opacity = "0";
     billBox.style.left = "-9999px";
@@ -1614,6 +1635,7 @@ async function placeOrder() {
   msg += `\nGrand Total: Rs ${total}`;
   msg += "\nOrder cancel allowed only in 2 minutes";
   msg += "\nEstimated Time: 10-15 min";
+  const billDateTime = formatBillDateTime();
 
   const payload = {
     name,
@@ -1629,7 +1651,7 @@ async function placeOrder() {
   };
 
   const upiUrl = buildUpiPaymentUrl(total, orderCounter, name, room);
-  const quickBillDataUrl = buildTextBillDataUrl(msg);
+  const quickBillDataUrl = buildTextBillDataUrl(msg, billDateTime);
   const quickBillName = `bill-${orderCounter}.png`;
   setBillManualLink(quickBillDataUrl, quickBillName);
   // Try immediate download in direct click context (most reliable chance).
@@ -1673,7 +1695,7 @@ async function placeOrder() {
   showCart();
 
   try {
-    await generateBillImage(msg, orderCounter);
+    await generateBillImage(msg, orderCounter, billDateTime);
   } catch (err) {
     console.log("Bill generation skipped:", err);
   }
