@@ -184,6 +184,48 @@ input[type="number"] {
   margin-bottom: 6px;
   text-align: center;
 }
+.qtyControl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.qtyBtn {
+  min-width: 18px;
+  height: 30px;
+  border: none;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  color: #1c2b3a;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 6px;
+}
+.qtyBtn:hover { opacity: 0.75; }
+.qtyInput {
+  margin: 0;
+  width: 62px !important;
+  height: 32px;
+  font-weight: 700;
+  text-align: center;
+}
+.removeBtn {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ff5a5f, #f04c8a);
+  box-shadow: 0 6px 12px rgba(177, 47, 89, 0.24);
+}
 input:focus, select:focus {
   outline: 2px solid #9fcaea;
   outline-offset: 1px;
@@ -248,6 +290,18 @@ input:focus, select:focus {
   .card img { height: 118px; }
   .card h3 { font-size: 16px; }
   .btn { width: 100%; padding: 10px 8px; }
+  .qtyControl { gap: 4px; }
+  .qtyBtn {
+    min-width: 16px;
+    height: 28px;
+    font-size: 24px;
+    padding: 0 4px;
+  }
+  .qtyInput {
+    width: 54px !important;
+    height: 30px;
+    font-size: 18px;
+  }
   input, select { width: min(320px, 94vw); }
   .qrPaymentBox { max-width: 94vw; }
 }
@@ -307,7 +361,7 @@ input:focus, select:focus {
     <div class="price">Rs 20</div>
     <div class="stock" style="color:#dc3545;font-weight:700;">Temporarily Unavailable</div>
     <div style="font-size:12px;color:#dc3545;font-weight:700;margin-bottom:6px;">Out of Stock</div>
-    <button class="btn" style="background:#dc3545;cursor:not-allowed;" disabled>Temporarily Unavailable</button>
+    <button class="btn addCartBtn" style="background:#dc3545;cursor:not-allowed;" disabled>Temporarily Unavailable</button>
   </div>
 
   <div class="card" data-name="Kurkure">
@@ -316,8 +370,12 @@ input:focus, select:focus {
     <div class="weight">75g Pack</div>
     <div class="price">Rs 20</div>
     <div class="stock"></div>
-    <input type="number" id="qty2" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 20, 'qty2')">Add</button>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty2', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty2" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty2', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 20, 'qty2')">Add</button>
   </div>
 
   <div class="card" data-name="Bhoot Chips" data-temp-unavailable="true">
@@ -327,7 +385,7 @@ input:focus, select:focus {
     <div class="price">Rs 20</div>
     <div class="stock" style="color:#dc3545;font-weight:700;">Temporarily Unavailable</div>
     <div style="font-size:12px;color:#dc3545;font-weight:700;margin-bottom:6px;">Out of Stock</div>
-    <button class="btn" style="background:#e6a9af;cursor:not-allowed;" disabled>Temporarily Unavailable</button>
+    <button class="btn addCartBtn" style="background:#e6a9af;cursor:not-allowed;" disabled>Temporarily Unavailable</button>
   </div>
 
   <div class="card" data-name="Onion Chips">
@@ -336,8 +394,12 @@ input:focus, select:focus {
     <div class="weight">80g Pack</div>
     <div class="price">Rs 30</div>
     <div class="stock"></div>
-    <input type="number" id="qty7" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 30, 'qty7')">Add</button>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty7', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty7" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty7', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 30, 'qty7')">Add</button>
   </div>
 
   <div class="card" data-name="Tomato Chips">
@@ -346,8 +408,12 @@ input:focus, select:focus {
     <div class="weight">80g Pack</div>
     <div class="price">Rs 30</div>
     <div class="stock"></div>
-    <input type="number" id="qty11" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 30, 'qty11')">Add</button>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty11', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty11" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty11', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 30, 'qty11')">Add</button>
   </div>
 
   <div class="card" data-name="Unibic Chocolate Chip Cookies">
@@ -356,8 +422,12 @@ input:focus, select:focus {
     <div class="weight">68g Pack</div>
     <div class="price">Rs 30</div>
     <div class="stock"></div>
-    <input type="number" id="qty8" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 30, 'qty8')">Add</button>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty8', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty8" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty8', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 30, 'qty8')">Add</button>
   </div>
 
   <div class="card" data-name="Unibic Kesar Cashew Badam Cookies">
@@ -366,8 +436,12 @@ input:focus, select:focus {
     <div class="weight">200g Pack</div>
     <div class="price">Rs 60</div>
     <div class="stock"></div>
-    <input type="number" id="qty10" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 60, 'qty10')">Add</button>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty10', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty10" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty10', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 60, 'qty10')">Add</button>
   </div>
 
   <div class="card" data-name="Bhujia">
@@ -376,8 +450,12 @@ input:focus, select:focus {
     <div class="weight">1kg Pack</div>
     <div class="price">Rs 300</div>
     <div class="stock"></div>
-    <input type="number" id="qty3" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 300, 'qty3')">Add</button>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty3', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty3" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty3', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 300, 'qty3')">Add</button>
   </div>
 
   <div class="card" data-name="Namkeen">
@@ -386,8 +464,12 @@ input:focus, select:focus {
     <div class="weight">150g Pack</div>
     <div class="price">Rs 50</div>
     <div class="stock"></div>
-    <input type="number" id="qty9" value="1" min="1"><br>
-    <button class="btn" onclick="addToCart(this, 50, 'qty9')">Add</button>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty9', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty9" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty9', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 50, 'qty9')">Add</button>
   </div>
 
 </div>
@@ -432,7 +514,7 @@ input:focus, select:focus {
     <div style="margin-top:8px;">This Device ID: <b id="deviceIdBox">-</b></div>
     <div id="ordersList"></div>
 
-    <h4 style="margin:10px 0 6px 0;">Stock Entry</h4>
+    <h4 style="margin:10px 0 6px 0;">Stock Add Entry (+/-)</h4>
     <div class="stockEditorRow">Maggi <input id="sMaggi" type="number"></div>
     <div class="stockEditorRow">Kurkure <input id="sKurkure" type="number"></div>
     <div class="stockEditorRow">Bhujia <input id="sBhujia" type="number"></div>
@@ -549,6 +631,17 @@ const STORE_UPI_NAME = "Monty Mart";
 const DEPLOYED_API_BASE = "https://happy-store-zxir.onrender.com";
 let cart = [];
 let stockData = {};
+const STOCK_INPUT_FIELD_MAP = {
+  Maggi: "sMaggi",
+  Kurkure: "sKurkure",
+  Bhujia: "sBhujia",
+  Namkeen: "sNamkeen",
+  "Bhoot Chips": "sBhootChips",
+  "Onion Chips": "sOnionChips",
+  "Tomato Chips": "sTomatoChips",
+  "Unibic Chocolate Chip Cookies": "sUnibicCookies",
+  "Unibic Kesar Cashew Badam Cookies": "sUnibicKesarCashewBadamCookies"
+};
 let storeClosed = false;
 let roomDeliveryBlocked = false;
 let autoCloseAt1230Enabled = false;
@@ -1156,7 +1249,8 @@ function updateStockDisplay() {
     const name = card.dataset.name;
     const tempUnavailable = String(card.dataset.tempUnavailable || "") === "true";
     const stock = Number(stockData[name] || 0);
-    const btn = card.querySelector("button");
+    const btn = card.querySelector(".addCartBtn");
+    if (!btn) return;
     if (tempUnavailable) {
       card.querySelector(".stock").innerText = "Temporarily Unavailable";
       btn.innerText = "Temporarily Unavailable";
@@ -1401,7 +1495,7 @@ function showCart() {
   cart.forEach((item, idx) => {
     const line = item.price * item.qty;
     itemsTotal += line;
-    html += `${item.name} x${item.qty} = Rs ${line} <button onclick="removeItem(${idx})">Remove</button><br>`;
+    html += `${item.name} x${item.qty} = Rs ${line} <button class="removeBtn" onclick="removeItem(${idx})">Remove</button><br>`;
   });
   const mode = getById("mode").value;
   const deliveryCharge = getDeliveryCharge(mode);
@@ -1416,6 +1510,14 @@ function showCart() {
 function removeItem(index) {
   cart.splice(index, 1);
   showCart();
+}
+
+function adjustQty(qtyId, delta) {
+  const input = getById(qtyId);
+  if (!input) return;
+  const current = parseInt(input.value, 10);
+  const next = (Number.isInteger(current) ? current : 1) + Number(delta || 0);
+  input.value = String(Math.max(1, next));
 }
 
 function addToCart(btn, _price, qtyId) {
@@ -1716,22 +1818,40 @@ function showAdmin() {
   loadAdminCustomersReport();
   loadLifetimeCustomersReport();
   loadOrders();
+  syncStockEntryInputs();
 }
 
 async function saveStock() {
-  stockData = {
-    Maggi: +getById("sMaggi").value,
-    Kurkure: +getById("sKurkure").value,
-    Bhujia: +getById("sBhujia").value,
-    Namkeen: +getById("sNamkeen").value,
-    "Bhoot Chips": +getById("sBhootChips").value,
-    "Onion Chips": +getById("sOnionChips").value,
-    "Tomato Chips": +getById("sTomatoChips").value,
-    "Unibic Chocolate Chip Cookies": +getById("sUnibicCookies").value,
-    "Unibic Kesar Cashew Badam Cookies": +getById("sUnibicKesarCashewBadamCookies").value
-  };
+  const nextStock = { ...stockData };
+  let changed = 0;
+
+  for (const [name, inputId] of Object.entries(STOCK_INPUT_FIELD_MAP)) {
+    const input = getById(inputId);
+    if (!input) continue;
+    const raw = String(input.value || "").trim();
+    if (raw === "") continue; // blank = no change
+
+    const delta = Number(raw);
+    if (!Number.isFinite(delta)) {
+      alert(`Invalid stock value for ${name}`);
+      input.focus();
+      return;
+    }
+
+    const current = Number(nextStock[name] || 0);
+    nextStock[name] = Math.max(0, current + delta);
+    changed += 1;
+  }
+
+  if (!changed) {
+    alert("Enter stock qty to add/remove. Blank fields are ignored.");
+    return;
+  }
+
+  stockData = nextStock;
 
   updateStockDisplay();
+  syncStockEntryInputs();
 
   try {
     const res = await apiFetch("/stock", {
@@ -1740,7 +1860,7 @@ async function saveStock() {
       body: JSON.stringify(stockData)
     });
     if (!res.ok) throw new Error("Stock save failed");
-    alert("Stock saved");
+    alert("Stock added/updated");
   } catch (err) {
     console.error(err);
     alert("Could not save stock");
@@ -2063,9 +2183,19 @@ async function loadStockFromServer() {
     if (!res.ok) throw new Error("stock fetch failed");
     stockData = await res.json();
     updateStockDisplay();
+    syncStockEntryInputs();
   } catch (err) {
     console.log("Server offline, keeping current stock cache:", err);
   }
+}
+
+function syncStockEntryInputs() {
+  Object.entries(STOCK_INPUT_FIELD_MAP).forEach(([name, inputId]) => {
+    const input = getById(inputId);
+    if (!input) return;
+    input.value = "";
+    input.placeholder = `Current: ${Number(stockData[name] || 0)} | add qty`;
+  });
 }
 
 function showCancelOrderUI() {
