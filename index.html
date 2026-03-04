@@ -582,6 +582,7 @@ input:focus, select:focus {
     <h3>All-Time Customer Spending (Never Reset)</h3>
     <button onclick="loadLifetimeCustomersReport()">Load Lifetime Spending</button>
     <div id="lifetimeCustomersReport" style="margin-top:10px;"></div>
+    <button id="financeToggleBtn" onclick="toggleFinanceSection()" style="background:#6c757d;color:#fff;margin-top:8px;">Show Finance Section</button>
 
     <div id="financeSection" style="display:none;">
     <h3>Purchase/Sell Price (Profit)</h3>
@@ -691,6 +692,7 @@ const LAST_ORDER_ID_KEY = "mm_last_order_id";
 const LAST_ORDER_TIME_KEY = "mm_last_order_time";
 const RECENT_CANCEL_ORDERS_KEY = "mm_recent_cancel_orders";
 const CANCEL_WINDOW_MS = 120000;
+const NEW_ORDER_BADGE_MS = 180000;
 const ADMIN_TAP_TARGET = 5;
 const ADMIN_TAP_WINDOW_MS = 6000;
 const LOW_STOCK_THRESHOLD = 15;
@@ -1860,6 +1862,33 @@ function showAdmin() {
   loadLifetimeCustomersReport();
   loadOrders();
   syncStockEntryInputs();
+  setFinanceSectionVisibility(false);
+}
+
+function setFinanceSectionVisibility(show) {
+  const box = getById("financeSection");
+  const btn = getById("financeToggleBtn");
+  if (!box || !btn) return;
+  box.style.display = show ? "block" : "none";
+  btn.innerText = show ? "Hide Finance Section" : "Show Finance Section";
+}
+
+function toggleFinanceSection() {
+  const box = getById("financeSection");
+  if (!box) return;
+  const isVisible = box.style.display !== "none";
+  if (isVisible) {
+    setFinanceSectionVisibility(false);
+    return;
+  }
+  const pass = prompt("Enter admin password to view finance");
+  if (pass === null) return;
+  const adminPass = localStorage.getItem("adminPass") || "291";
+  if (String(pass) !== String(adminPass)) {
+    alert("Wrong password");
+    return;
+  }
+  setFinanceSectionVisibility(true);
 }
 
 async function saveStock() {
@@ -2167,10 +2196,15 @@ async function loadOrders() {
       const cancelLeftSec = Number.isFinite(createdAtMs)
         ? Math.ceil((CANCEL_WINDOW_MS - (Date.now() - createdAtMs)) / 1000)
         : 0;
+      const isNewOrder =
+        String(o.status || "").toLowerCase() === "active" &&
+        Number.isFinite(createdAtMs) &&
+        (Date.now() - createdAtMs) <= NEW_ORDER_BADGE_MS;
       const cancelWindowText = cancelLeftSec > 0 ? `${cancelLeftSec}s left` : "Expired";
       return `
 <div style="border:1px solid #aaa;padding:8px;margin:5px;">
 <b>${o.name}</b> (Room ${o.room})<br>
+${isNewOrder ? `<div style="color:#d60000;font-weight:800;">NEW ORDER</div>` : ""}
 Order No: ${orderId || "-"}<br>
 Type: <b>${o.mode === "pickup" ? "Self Pickup" : "Room Delivery"}</b><br>
 Status: <b style="color:${statusColor};">${orderStatus}</b><br>
