@@ -1536,8 +1536,22 @@ function adjustQty(qtyId, delta) {
   const input = getById(qtyId);
   if (!input) return;
   const current = parseInt(input.value, 10);
-  const next = (Number.isInteger(current) ? current : 1) + Number(delta || 0);
-  input.value = String(Math.max(1, next));
+  const base = Number.isInteger(current) ? current : 1;
+  const change = Number(delta || 0);
+  let next = base + change;
+
+  const card = input.closest(".card");
+  const name = card && card.dataset ? String(card.dataset.name || "").trim() : "";
+  const inCartQty = cart.reduce((sum, item) => {
+    if (item && item.name === name) return sum + (Number(item.qty) || 0);
+    return sum;
+  }, 0);
+  const available = Math.max(0, Number(stockData[name] || 0) - inCartQty);
+  const maxAllowed = Math.max(1, available);
+
+  if (next < 1) next = 1;
+  if (next > maxAllowed) next = maxAllowed;
+  input.value = String(next);
 }
 
 function addToCart(btn, _price, qtyId) {
