@@ -231,7 +231,7 @@ input:focus, select:focus {
   outline-offset: 1px;
   border-color: #4d94c8;
 }
-#liveOrdersGrid { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 10px; align-items: start; }
+#liveOrdersGrid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 10px; align-items: start; }
 .floorCol { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-height: 220px; }
 .floorTitle { font-weight: 800; margin-bottom: 6px; font-family: "Space Grotesk", sans-serif; }
 .floorMeta { font-size: 12px; color: #56685e; margin-bottom: 8px; }
@@ -583,6 +583,7 @@ input:focus, select:focus {
     <button onclick="loadLifetimeCustomersReport()">Load Lifetime Spending</button>
     <div id="lifetimeCustomersReport" style="margin-top:10px;"></div>
 
+    <div id="financeSection" style="display:none;">
     <h3>Purchase/Sell Price (Profit)</h3>
     <div class="priceGrid">
       <div class="priceCol">
@@ -621,6 +622,7 @@ input:focus, select:focus {
     <button onclick="resetProfitTotals()" style="background:#d9534f;color:#fff;margin-top:8px;">Reset Profit</button>
     <button onclick="setMonthProfitManually()" style="background:#0d6efd;color:#fff;margin-top:8px;">Set This Month Profit</button>
     <button onclick="setMonthDeliveryProfitManually()" style="background:#198754;color:#fff;margin-top:8px;">Set Month Delivery Profit</button>
+    </div>
   </div>
 </div>
 
@@ -2187,16 +2189,26 @@ ${(o.status !== "cancelled" && orderId > 0) ? `<button class="btn" style="backgr
 
     const visibleOrders = allOrders.filter((o) => String(o && o.status || "").toLowerCase() !== "cancelled");
     const latestOrders = visibleOrders.slice().reverse().slice(0, LIVE_ORDERS_PER_FLOOR_LIMIT);
-    const SEGMENTS = 4;
-    const segments = Array.from({ length: SEGMENTS }, () => []);
-    latestOrders.forEach((o, i) => {
-      segments[i % SEGMENTS].push(o);
+    const floorGroups = {
+      "1st Floor (000-299)": [],
+      "4th Floor (300-599)": [],
+      "6th Floor (600+)": []
+    };
+    latestOrders.forEach((o) => {
+      const roomNo = Number(o && o.room);
+      if (Number.isFinite(roomNo) && roomNo <= 299) {
+        floorGroups["1st Floor (000-299)"].push(o);
+      } else if (Number.isFinite(roomNo) && roomNo <= 599) {
+        floorGroups["4th Floor (300-599)"].push(o);
+      } else {
+        floorGroups["6th Floor (600+)"].push(o);
+      }
     });
 
-    let html = `<h3>Live Orders (6th Floor Dispatch) (${latestOrders.length}/${allOrders.length})</h3>`;
+    let html = `<h3>Live Orders (Floor Wise) (${latestOrders.length}/${allOrders.length})</h3>`;
     html += `<div id="liveOrdersGrid">`;
-    segments.forEach((segmentOrders, idx) => {
-      html += `<div class="floorCol"><div class="floorTitle">Segment ${idx + 1}</div><div class="floorMeta">Collect from Room 605 | WhatsApp: 9983729301</div><div class="floorOrdersList">${segmentOrders.length ? segmentOrders.map(orderCardHtml).join("") : "<div>No orders</div>"}</div></div>`;
+    Object.entries(floorGroups).forEach(([title, ordersForFloor]) => {
+      html += `<div class="floorCol"><div class="floorTitle">${title}</div><div class="floorMeta">Orders: ${ordersForFloor.length} | Collect from Room 605 | WhatsApp: 9983729301</div><div class="floorOrdersList">${ordersForFloor.length ? ordersForFloor.map(orderCardHtml).join("") : "<div>No orders</div>"}</div></div>`;
     });
     html += `</div>`;
     getById("liveOrders").innerHTML = html;
