@@ -1829,6 +1829,11 @@ async function placeOrder() {
   localStorage.setItem("orderNo", String(++orderCounter));
   cart = [];
   showCart();
+  loadTopCustomers();
+  if (getById("adminPanel").style.display === "block") {
+    loadAdminCustomersReport();
+    loadLifetimeCustomersReport();
+  }
 
   try {
     await generateBillImage(msg, orderCounter, billDateTime);
@@ -2932,6 +2937,11 @@ refreshTodayReport(false);
 setInterval(() => refreshTodayReport(false), 15000);
 loadTopCustomers();
 setInterval(loadTopCustomers, 15000);
+setInterval(() => {
+  if (getById("adminPanel").style.display === "block") {
+    loadAdminCustomersReport();
+  }
+}, 15000);
 showCancelOrderUI();
 </script>
 
