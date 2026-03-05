@@ -48,6 +48,7 @@ const defaultManualCustomers = {
   monthly: {},
   lifetime: {},
 };
+const DEFAULT_TOTAL_PROFIT_ADJUSTMENT = 1044;
 
 function getDefaultProductMap(fillValue) {
   return {
@@ -138,6 +139,7 @@ const StoreStateSchema = new mongoose.Schema(
     manualCustomers: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultManualCustomers }) },
     monthProfitAdjustments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
     monthDeliveryProfitAdjustments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
+    totalProfitAdjustment: { type: Number, default: DEFAULT_TOTAL_PROFIT_ADJUSTMENT },
     buyPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultBuyPrice }) },
     sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
     distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
@@ -159,6 +161,7 @@ let pushSubscriptions = [];
 let manualCustomers = normalizeManualCustomers(defaultManualCustomers);
 let monthProfitAdjustments = {};
 let monthDeliveryProfitAdjustments = {};
+let totalProfitAdjustment = DEFAULT_TOTAL_PROFIT_ADJUSTMENT;
 let buyPrice = { ...defaultBuyPrice };
 let sellPrice = { ...defaultSellPrice };
 let distributorStock = normalizeDistributorStock(defaultDistributorStock);
@@ -193,6 +196,7 @@ function saveData() {
       manualCustomers,
       monthProfitAdjustments,
       monthDeliveryProfitAdjustments,
+      totalProfitAdjustment,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -220,6 +224,7 @@ async function loadStateFromMongo() {
       manualCustomers,
       monthProfitAdjustments,
       monthDeliveryProfitAdjustments,
+      totalProfitAdjustment,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -239,6 +244,9 @@ async function loadStateFromMongo() {
   manualCustomers = normalizeManualCustomers(doc.manualCustomers);
   monthProfitAdjustments = normalizeMonthProfitAdjustments(doc.monthProfitAdjustments);
   monthDeliveryProfitAdjustments = normalizeMonthProfitAdjustments(doc.monthDeliveryProfitAdjustments);
+  totalProfitAdjustment = Number.isFinite(Number(doc.totalProfitAdjustment))
+    ? Number(doc.totalProfitAdjustment)
+    : DEFAULT_TOTAL_PROFIT_ADJUSTMENT;
   buyPrice = mergeProductMap(defaultBuyPrice, doc.buyPrice, 0);
   sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
   distributorStock = normalizeDistributorStock(doc.distributorStock);
@@ -850,7 +858,8 @@ app.get("/today-report", (req, res) => {
     monthRevenue,
     monthProfit: monthProfit + monthProfitAdjustment,
     monthDeliveryProfit: monthDeliveryProfit + monthDeliveryProfitAdjustment,
-    totalProfit,
+    totalProfit: totalProfit + totalProfitAdjustment,
+    totalProfitAdjustment,
     monthProfitAdjustment,
     monthDeliveryProfitAdjustment,
   });
