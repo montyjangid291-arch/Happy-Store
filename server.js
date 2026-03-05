@@ -802,6 +802,7 @@ app.get("/today-report", (req, res) => {
   let monthRevenue = 0;
   let monthProfit = 0;
   let monthDeliveryProfit = 0;
+  let totalProfit = 0;
 
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
@@ -817,6 +818,7 @@ app.get("/today-report", (req, res) => {
         ? (Number(order.deliveryCharge) || 0)
         : 0;
     const orderDeliveryProfit = isOrderExcludedFromProfitStats(order) ? 0 : orderDeliveryProfitBase;
+    totalProfit += orderProfit;
 
     if (formatLocalDate(dt) === todayKey) {
       revenue += orderTotal;
@@ -848,6 +850,7 @@ app.get("/today-report", (req, res) => {
     monthRevenue,
     monthProfit: monthProfit + monthProfitAdjustment,
     monthDeliveryProfit: monthDeliveryProfit + monthDeliveryProfitAdjustment,
+    totalProfit,
     monthProfitAdjustment,
     monthDeliveryProfitAdjustment,
   });
