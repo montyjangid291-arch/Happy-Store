@@ -1592,9 +1592,12 @@ function normalizeWhatsAppPhone(raw) {
 
 function buildUpiPaymentUrl(total, orderNo, customerName, roomNo) {
   const amount = Number(total || 0).toFixed(2);
-  const txnRef = `MM${Date.now()}${Math.floor(Math.random() * 1000)}`;
-  const txnNote = `Monty Mart Order ${orderNo} - ${customerName} (Room ${roomNo})`;
-  return `upi://pay?pa=${encodeURIComponent(STORE_UPI_ID)}&pn=${encodeURIComponent(STORE_UPI_NAME)}&tr=${encodeURIComponent(txnRef)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
+  const safeOrderNo = String(orderNo || "").replace(/\D/g, "").slice(-8) || "0";
+  const safeRoom = String(roomNo || "").replace(/\D/g, "").slice(-4) || "0";
+  const safeName = String(STORE_UPI_NAME || "Monty Mart").replace(/[^A-Za-z0-9 ._-]/g, "").trim() || "Monty Mart";
+  const txnRef = `MM${safeOrderNo}${safeRoom}`;
+  const txnNote = `Order ${safeOrderNo}`;
+  return `upi://pay?pa=${encodeURIComponent(STORE_UPI_ID)}&pn=${encodeURIComponent(safeName)}&tr=${encodeURIComponent(txnRef)}&am=${encodeURIComponent(amount)}&cu=INR&tn=${encodeURIComponent(txnNote)}`;
 }
 
 function openExternalUrl(url, openInNewTab) {
