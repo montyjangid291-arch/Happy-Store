@@ -664,11 +664,86 @@ app.post("/stock", (req, res) => {
     return res.status(400).json({ status: "error", message: "Invalid stock" });
   }
 
-  storeStock = req.body;
+  const payload = req.body;
+  const hasEnvelope =
+    payload &&
+    typeof payload === "object" &&
+    !Array.isArray(payload) &&
+    payload.stock &&
+    typeof payload.stock === "object";
+  const incomingStock = hasEnvelope ? payload.stock : payload;
+  storeStock = mergeProductMap(storeStock, incomingStock, 0);
+
+  let offlineProfitAdded = 0;
+  if (hasEnvelope && Number.isFinite(Number(payload.offlineProfitDelta))) {
+    offlineProfitAdded = Number(payload.offlineProfitDelta);
+    if (offlineProfitAdded !== 0) {
+      totalProfitAdjustment += offlineProfitAdded;
+      const month = getMonthKey(new Date());
+      monthProfitAdjustments[month] = (Number(monthProfitAdjustments[month]) || 0) + offlineProfitAdded;
+    }
+  }
+
   saveData();
   console.log("Stock Updated:", storeStock);
-  res.json({ status: "saved" });
+  res.json({
+    status: offlineProfitAdded !== 0 ? "saved_with_offline_profit" : "saved",
+    offlineProfitAdded,
+    totalProfitAdjustment,
+  });
 });
+
+function handleOfflineSale(req, res) {
+  const password = String(req.body?.password || "");
+  if (password !== RESET_PROFIT_PASSWORD) {
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+
+  const itemName = String(req.body?.itemName || "").trim();
+  const qty = Number(req.body?.qty);
+  if (!itemName || !Number.isFinite(qty) || qty <= 0) {
+    return res.status(400).json({ status: "error", message: "Invalid itemName/qty" });
+  }
+  if (!Object.prototype.hasOwnProperty.call(storeStock, itemName)) {
+    return res.status(400).json({ status: "error", message: "Unknown item" });
+  }
+
+  const available = Number(storeStock[itemName]) || 0;
+  if (qty > available) {
+    return res.status(400).json({
+      status: "error",
+      message: `Only ${available} in stock for ${itemName}`,
+      available,
+    });
+  }
+
+  const rawSell = Number(req.body?.sellPrice);
+  const rawBuy = Number(req.body?.buyPrice);
+  const sellAt = Number.isFinite(rawSell) ? rawSell : (Number(sellPrice[itemName]) || 0);
+  const buyAt = Number.isFinite(rawBuy) ? rawBuy : (Number(buyPrice[itemName]) || 0);
+  const profitAdded = (sellAt - buyAt) * qty;
+
+  storeStock[itemName] = available - qty;
+  totalProfitAdjustment += profitAdded;
+  const month = getMonthKey(new Date());
+  monthProfitAdjustments[month] = (Number(monthProfitAdjustments[month]) || 0) + profitAdded;
+  saveData();
+
+  return res.json({
+    status: "offline_sale_saved",
+    itemName,
+    qty,
+    stockLeft: Number(storeStock[itemName]) || 0,
+    sellAt,
+    buyAt,
+    profitAdded,
+    totalProfitAdjustment,
+    month,
+    monthProfitAdjustment: Number(monthProfitAdjustments[month]) || 0,
+  });
+}
+app.post("/admin/offline-sale", handleOfflineSale);
+app.post("/offline-sale", handleOfflineSale);
 
 app.post("/order", async (req, res) => {
   const order = req.body;
@@ -1299,6 +1374,19 @@ function calculateRawMonthProfit(month) {
   return monthProfit;
 }
 
+function calculateRawTotalProfit() {
+  let totalProfit = 0;
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const orderProfitBase = Number.isFinite(Number(order.profit))
+      ? Number(order.profit)
+      : calculateOrderProfit(order);
+    const orderProfit = isOrderExcludedFromProfitStats(order) ? 0 : orderProfitBase;
+    totalProfit += orderProfit;
+  });
+  return totalProfit;
+}
+
 function calculateRawMonthDeliveryProfit(month) {
   let monthDeliveryProfit = 0;
   orders.forEach((order) => {
@@ -1348,6 +1436,29 @@ app.post("/reset-profit", handleResetProfit);
 app.post("/admin/set-month-profit", handleSetMonthProfit);
 app.post("/set-month-profit", handleSetMonthProfit);
 
+function handleSetTotalProfit(req, res) {
+  const password = String(req.body?.password || "");
+  if (password !== RESET_PROFIT_PASSWORD) {
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+
+  const desiredTotalProfit = Number(req.body?.desiredTotalProfit);
+  if (!Number.isFinite(desiredTotalProfit)) {
+    return res.status(400).json({ status: "error", message: "Invalid desiredTotalProfit" });
+  }
+
+  const rawTotalProfit = calculateRawTotalProfit();
+  totalProfitAdjustment = desiredTotalProfit - rawTotalProfit;
+  saveData();
+
+  return res.json({
+    status: "saved",
+    rawTotalProfit,
+    adjustment: totalProfitAdjustment,
+    totalProfit: rawTotalProfit + totalProfitAdjustment,
+  });
+}
+
 function handleSetMonthDeliveryProfit(req, res) {
   const password = String(req.body?.password || "");
   if (password !== RESET_PROFIT_PASSWORD) {
@@ -1379,6 +1490,8 @@ function handleSetMonthDeliveryProfit(req, res) {
 
 app.post("/admin/set-month-delivery-profit", handleSetMonthDeliveryProfit);
 app.post("/set-month-delivery-profit", handleSetMonthDeliveryProfit);
+app.post("/admin/set-total-profit", handleSetTotalProfit);
+app.post("/set-total-profit", handleSetTotalProfit);
 
 app.get("/orders", (req, res) => {
   res.json(orders);

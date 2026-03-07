@@ -531,6 +531,27 @@ input:focus, select:focus {
         <div class="stockEditorRow">Tomato Chips <input id="sTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Chocolate Chip Cookies <input id="sUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Cookies <input id="sUnibicKesarCashewBadamCookies" type="number"></div>
+        <div style="margin-top:8px;font-size:12px;color:#245476;">
+          <label><input id="autoAddOfflineProfit" type="checkbox" checked> Stock minus par offline profit auto add kare</label>
+        </div>
+        <div style="margin-top:10px;border:1px dashed #b6cfe4;border-radius:10px;padding:8px;background:#f8fcff;">
+          <h4 style="margin:0 0 8px 0;">Offline Sale Quick Entry</h4>
+          <select id="offlineSaleItem" onchange="syncOfflineSaleDefaultPrices()" style="width:100%;margin-bottom:6px;">
+            <option value="Maggi">Maggi</option>
+            <option value="Kurkure">Kurkure</option>
+            <option value="Bhujia">Bhujia</option>
+            <option value="Namkeen">Namkeen</option>
+            <option value="Onion Chips">Onion Chips</option>
+            <option value="Tomato Chips">Tomato Chips</option>
+            <option value="Unibic Chocolate Chip Cookies">Unibic Chocolate Chip Cookies</option>
+            <option value="Unibic Kesar Cashew Badam Cookies">Unibic Kesar Cashew Badam Cookies</option>
+          </select>
+          <input id="offlineSaleQty" type="number" min="1" step="1" placeholder="Qty sold offline" style="width:100%;margin-bottom:6px;">
+          <input id="offlineSaleSellPrice" type="number" min="0" step="0.01" placeholder="Sell Rs (blank=default)" style="width:100%;margin-bottom:6px;">
+          <input id="offlineSaleBuyPrice" type="number" min="0" step="0.01" placeholder="Buy Rs (blank=default)" style="width:100%;margin-bottom:6px;">
+          <button onclick="saveOfflineSale()" style="width:100%;">Save Offline Sale</button>
+          <div id="offlineSaleStatus" style="margin-top:6px;font-size:12px;color:#245476;"></div>
+        </div>
       </div>
       <div class="adminActionCol">
         <button class="adminActionBtn" onclick="saveStock()">Save Stock</button>
@@ -612,6 +633,7 @@ input:focus, select:focus {
     <button onclick="resetProfitTotals()" style="background:#d9534f;color:#fff;margin-top:8px;">Reset Profit</button>
     <button onclick="setMonthProfitManually()" style="background:#0d6efd;color:#fff;margin-top:8px;">Set This Month Profit</button>
     <button onclick="setMonthDeliveryProfitManually()" style="background:#198754;color:#fff;margin-top:8px;">Set Month Delivery Profit</button>
+    <button onclick="setTotalProfitManually()" style="background:#fd7e14;color:#fff;margin-top:8px;">Set Total Profit</button>
     </div>
   </div>
 </div>
@@ -651,6 +673,16 @@ const STOCK_INPUT_FIELD_MAP = {
   "Tomato Chips": "sTomatoChips",
   "Unibic Chocolate Chip Cookies": "sUnibicCookies",
   "Unibic Kesar Cashew Badam Cookies": "sUnibicKesarCashewBadamCookies"
+};
+const BUY_PRICE_INPUT_FIELD_MAP = {
+  Maggi: "bMaggi",
+  Kurkure: "bKurkure",
+  Bhujia: "bBhujia",
+  Namkeen: "bNamkeen",
+  "Onion Chips": "bOnionChips",
+  "Tomato Chips": "bTomatoChips",
+  "Unibic Chocolate Chip Cookies": "bUnibicCookies",
+  "Unibic Kesar Cashew Badam Cookies": "bUnibicKesarCashewBadamCookies"
 };
 let storeClosed = false;
 let roomDeliveryBlocked = false;
@@ -1846,6 +1878,7 @@ function showAdmin() {
   loadLifetimeCustomersReport();
   loadOrders();
   syncStockEntryInputs();
+  syncOfflineSaleDefaultPrices();
   setFinanceSectionVisibility(false);
 }
 
@@ -1877,6 +1910,7 @@ function toggleFinanceSection() {
 
 async function saveStock() {
   const nextStock = { ...stockData };
+  const stockDeltas = {};
   let changed = 0;
 
   for (const [name, inputId] of Object.entries(STOCK_INPUT_FIELD_MAP)) {
@@ -1894,6 +1928,7 @@ async function saveStock() {
 
     const current = Number(nextStock[name] || 0);
     nextStock[name] = Math.max(0, current + delta);
+    stockDeltas[name] = delta;
     changed += 1;
   }
 
@@ -1903,6 +1938,8 @@ async function saveStock() {
   }
 
   stockData = nextStock;
+  const autoAddOfflineProfit = !!getById("autoAddOfflineProfit")?.checked;
+  const offlineProfitDelta = autoAddOfflineProfit ? calculateOfflineProfitFromStockChanges(stockDeltas) : 0;
 
   updateStockDisplay();
   syncStockEntryInputs();
@@ -1911,13 +1948,136 @@ async function saveStock() {
     const res = await apiFetch("/stock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(stockData)
+      body: JSON.stringify({
+        stock: stockData,
+        offlineProfitDelta
+      })
     });
-    if (!res.ok) throw new Error("Stock save failed");
-    alert("Stock added/updated");
+    const data = await safeJson(res);
+    if (!res.ok || !["saved", "saved_with_offline_profit"].includes(String(data.status || ""))) {
+      throw new Error(data.message || "Stock save failed");
+    }
+    const addedOfflineProfit = Number(data.offlineProfitAdded) || 0;
+    const msg = addedOfflineProfit
+      ? `Stock added/updated. Offline profit Rs ${addedOfflineProfit} auto add ho gaya.`
+      : "Stock added/updated";
+    alert(msg);
+    refreshTodayReport(false);
   } catch (err) {
     console.error(err);
     alert("Could not save stock");
+  }
+}
+
+function calculateOfflineProfitFromStockChanges(stockDeltas) {
+  let total = 0;
+  Object.entries(stockDeltas || {}).forEach(([name, deltaRaw]) => {
+    const delta = Number(deltaRaw) || 0;
+    if (delta >= 0) return;
+    const soldQty = Math.abs(delta);
+    const sell = Number(realPrice[name]) || 0;
+    const buyInputId = BUY_PRICE_INPUT_FIELD_MAP[name];
+    const buy = Number(getById(buyInputId)?.value);
+    const effectiveBuy = Number.isFinite(buy) ? buy : 0;
+    total += (sell - effectiveBuy) * soldQty;
+  });
+  return Number(total.toFixed(2));
+}
+
+function setOfflineSaleStatus(text, isError) {
+  const box = getById("offlineSaleStatus");
+  if (!box) return;
+  box.innerText = text;
+  box.style.color = isError ? "#b42318" : "#245476";
+}
+
+function syncOfflineSaleDefaultPrices() {
+  const itemName = String(getById("offlineSaleItem")?.value || "").trim();
+  if (!itemName) return;
+  const sellInput = getById("offlineSaleSellPrice");
+  const buyInput = getById("offlineSaleBuyPrice");
+  const sellDefault = Number(realPrice[itemName]) || 0;
+  const buyDefault = Number(getById(BUY_PRICE_INPUT_FIELD_MAP[itemName])?.value) || 0;
+  if (sellInput) sellInput.placeholder = `Sell Rs (blank=default ${sellDefault})`;
+  if (buyInput) buyInput.placeholder = `Buy Rs (blank=default ${buyDefault})`;
+}
+
+async function saveOfflineSale() {
+  const itemName = String(getById("offlineSaleItem")?.value || "").trim();
+  const qty = Number(getById("offlineSaleQty")?.value || 0);
+  const sellRaw = String(getById("offlineSaleSellPrice")?.value || "").trim();
+  const buyRaw = String(getById("offlineSaleBuyPrice")?.value || "").trim();
+
+  if (!itemName) {
+    setOfflineSaleStatus("Select item", true);
+    return;
+  }
+  if (!Number.isFinite(qty) || qty <= 0) {
+    setOfflineSaleStatus("Valid qty required", true);
+    return;
+  }
+
+  const customSell = sellRaw === "" ? null : Number(sellRaw);
+  const customBuy = buyRaw === "" ? null : Number(buyRaw);
+  if (customSell !== null && !Number.isFinite(customSell)) {
+    setOfflineSaleStatus("Sell price invalid", true);
+    return;
+  }
+  if (customBuy !== null && !Number.isFinite(customBuy)) {
+    setOfflineSaleStatus("Buy price invalid", true);
+    return;
+  }
+
+  const pass = prompt("Enter password for offline sale entry");
+  if (pass === null) return;
+  if (!pass.trim()) {
+    setOfflineSaleStatus("Password required", true);
+    return;
+  }
+
+  try {
+    const body = {
+      password: pass.trim(),
+      itemName,
+      qty
+    };
+    if (customSell !== null) body.sellPrice = customSell;
+    if (customBuy !== null) body.buyPrice = customBuy;
+
+    const payload = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    };
+
+    let res = await apiFetch("/admin/offline-sale", payload);
+    let data = await safeJson(res);
+    if ((res.status === 404 || data.status === "not_found") && !res.ok) {
+      res = await apiFetch("/offline-sale", payload);
+      data = await safeJson(res);
+    }
+    if (!res.ok || data.status !== "offline_sale_saved") {
+      throw new Error(data.message || data.status || "Offline sale save failed");
+    }
+
+    if (Number.isFinite(Number(data.stockLeft))) {
+      stockData[itemName] = Number(data.stockLeft);
+    } else if (Number.isFinite(Number(stockData[itemName]))) {
+      stockData[itemName] = Math.max(0, Number(stockData[itemName]) - qty);
+    }
+    updateStockDisplay();
+    syncStockEntryInputs();
+    refreshTodayReport(false);
+
+    const profitAdded = Number(data.profitAdded) || 0;
+    setOfflineSaleStatus(
+      `Saved: ${itemName} x${qty}. Profit +Rs ${profitAdded}. Stock left: ${Number(data.stockLeft) || 0}`,
+      false
+    );
+    getById("offlineSaleQty").value = "";
+  } catch (err) {
+    console.error(err);
+    setOfflineSaleStatus(`Could not save offline sale: ${err.message || "Unknown error"}`, true);
   }
 }
 
@@ -1960,6 +2120,7 @@ async function loadBuyPriceFromServer() {
     getById("bTomatoChips").value = Number(buy["Tomato Chips"] || 0);
     getById("bUnibicCookies").value = Number(buy["Unibic Chocolate Chip Cookies"] || 0);
     getById("bUnibicKesarCashewBadamCookies").value = Number(buy["Unibic Kesar Cashew Badam Cookies"] || 0);
+    syncOfflineSaleDefaultPrices();
   } catch (err) {
     console.log("Could not load buy prices:", err);
   }
@@ -2008,6 +2169,7 @@ async function loadSellPriceFromServer() {
     getById("spUnibicKesarCashewBadamCookies").value = Number(realPrice["Unibic Kesar Cashew Badam Cookies"] || 0);
 
     renderSellPriceCards();
+    syncOfflineSaleDefaultPrices();
   } catch (err) {
     console.log("Could not load sell prices:", err);
   }
@@ -2035,6 +2197,7 @@ async function saveBuyPrice() {
     const data = await safeJson(res);
     if (!res.ok || data.status !== "saved") throw new Error(data.message || "buy price save failed");
     alert("Buy price saved");
+    syncOfflineSaleDefaultPrices();
     refreshTodayReport(false);
   } catch (err) {
     console.error(err);
@@ -2066,6 +2229,7 @@ async function saveSellPrice() {
     realPrice = { ...realPrice, ...sell };
     renderSellPriceCards();
     alert("Sell price saved");
+    syncOfflineSaleDefaultPrices();
     refreshTodayReport(false);
   } catch (err) {
     console.error(err);
@@ -2896,6 +3060,49 @@ async function setMonthDeliveryProfitManually() {
   } catch (err) {
     console.error(err);
     alert(`Could not set room delivery month profit: ${err.message || "Unknown error"}`);
+  }
+}
+
+async function setTotalProfitManually() {
+  const amountRaw = prompt("Set Total Profit (All Time) Rs");
+  if (amountRaw === null) return;
+  const desiredTotalProfit = Number(amountRaw);
+  if (!Number.isFinite(desiredTotalProfit)) {
+    alert("Valid amount required");
+    return;
+  }
+
+  const pass = prompt("Enter password to set total profit");
+  if (pass === null) return;
+  if (!pass.trim()) {
+    alert("Password required");
+    return;
+  }
+
+  try {
+    const payload = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: pass.trim(),
+        desiredTotalProfit
+      })
+    };
+
+    let res = await apiFetch("/admin/set-total-profit", payload);
+    let data = await safeJson(res);
+    if ((res.status === 404 || data.status === "not_found") && !res.ok) {
+      res = await apiFetch("/set-total-profit", payload);
+      data = await safeJson(res);
+    }
+    if (!res.ok || data.status !== "saved") {
+      throw new Error(data.message || data.status || "Set total profit failed");
+    }
+    alert(`Total Profit set to Rs ${Number(data.totalProfit) || 0}`);
+    refreshTodayReport(false);
+  } catch (err) {
+    console.error(err);
+    alert(`Could not set total profit: ${err.message || "Unknown error"}`);
   }
 }
 
