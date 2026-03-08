@@ -17,6 +17,7 @@ const defaultStock = {
   "Tomato Chips": 5,
   "Unibic Chocolate Chip Cookies": 5,
   "Unibic Kesar Cashew Badam Cookies": 5,
+  "Unibic Chocokiss": 5,
 };
 
 const defaultBuyPrice = {
@@ -28,6 +29,7 @@ const defaultBuyPrice = {
   "Tomato Chips": 0,
   "Unibic Chocolate Chip Cookies": 0,
   "Unibic Kesar Cashew Badam Cookies": 0,
+  "Unibic Chocokiss": 0,
 };
 
 const defaultSellPrice = {
@@ -39,6 +41,7 @@ const defaultSellPrice = {
   "Tomato Chips": 30,
   "Unibic Chocolate Chip Cookies": 30,
   "Unibic Kesar Cashew Badam Cookies": 60,
+  "Unibic Chocokiss": 120,
 };
 
 const defaultManualCustomers = {
@@ -57,6 +60,7 @@ function getDefaultProductMap(fillValue) {
     "Tomato Chips": fillValue,
     "Unibic Chocolate Chip Cookies": fillValue,
     "Unibic Kesar Cashew Badam Cookies": fillValue,
+    "Unibic Chocokiss": fillValue,
   };
 }
 
