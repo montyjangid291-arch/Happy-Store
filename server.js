@@ -150,6 +150,7 @@ const StoreStateSchema = new mongoose.Schema(
     closingSoonAlertEnabled: { type: Boolean, default: false },
     sleepingCallAlertEnabled: { type: Boolean, default: false },
     outOfHostelAlertEnabled: { type: Boolean, default: false },
+    examDeliveryOffAlertEnabled: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -173,6 +174,7 @@ let autoCloseLastRunDate = "";
 let closingSoonAlertEnabled = false;
 let sleepingCallAlertEnabled = false;
 let outOfHostelAlertEnabled = false;
+let examDeliveryOffAlertEnabled = false;
 let initPromise = null;
 
 function mergeProductMap(baseMap, incomingMap, fallbackValue = 0) {
@@ -209,6 +211,7 @@ function saveData() {
       closingSoonAlertEnabled,
       sleepingCallAlertEnabled,
       outOfHostelAlertEnabled,
+      examDeliveryOffAlertEnabled,
     },
     { upsert: true, setDefaultsOnInsert: true, new: true }
   ).catch((err) => {
@@ -238,6 +241,7 @@ async function loadStateFromMongo() {
       closingSoonAlertEnabled,
       sleepingCallAlertEnabled,
       outOfHostelAlertEnabled,
+      examDeliveryOffAlertEnabled,
     });
     return;
   }
@@ -261,6 +265,7 @@ async function loadStateFromMongo() {
   closingSoonAlertEnabled = !!doc.closingSoonAlertEnabled;
   sleepingCallAlertEnabled = !!doc.sleepingCallAlertEnabled;
   outOfHostelAlertEnabled = !!doc.outOfHostelAlertEnabled;
+  examDeliveryOffAlertEnabled = !!doc.examDeliveryOffAlertEnabled;
 }
 
 async function initDatabase() {
@@ -502,7 +507,7 @@ function applyMonthlyManualCustomers(spendMap, month) {
 
 async function readStoreFlagsFromDb() {
   const doc = await StoreState.findOne({ singletonKey: "main" })
-    .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1, closingSoonAlertEnabled: 1, sleepingCallAlertEnabled: 1, outOfHostelAlertEnabled: 1 })
+    .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1, closingSoonAlertEnabled: 1, sleepingCallAlertEnabled: 1, outOfHostelAlertEnabled: 1, examDeliveryOffAlertEnabled: 1 })
     .lean();
   if (!doc) return null;
   return {
@@ -513,6 +518,7 @@ async function readStoreFlagsFromDb() {
     closingSoonAlertEnabled: !!doc.closingSoonAlertEnabled,
     sleepingCallAlertEnabled: !!doc.sleepingCallAlertEnabled,
     outOfHostelAlertEnabled: !!doc.outOfHostelAlertEnabled,
+    examDeliveryOffAlertEnabled: !!doc.examDeliveryOffAlertEnabled,
   };
 }
 
@@ -1567,6 +1573,7 @@ app.get("/store-status", async (req, res) => {
       closingSoonAlertEnabled = !!flags.closingSoonAlertEnabled;
       sleepingCallAlertEnabled = !!flags.sleepingCallAlertEnabled;
       outOfHostelAlertEnabled = !!flags.outOfHostelAlertEnabled;
+      examDeliveryOffAlertEnabled = !!flags.examDeliveryOffAlertEnabled;
     }
   } catch (err) {
     console.error("Could not read store status from DB:", err);
@@ -1579,6 +1586,7 @@ app.get("/store-status", async (req, res) => {
     closingSoonAlertEnabled: !!closingSoonAlertEnabled,
     sleepingCallAlertEnabled: !!sleepingCallAlertEnabled,
     outOfHostelAlertEnabled: !!outOfHostelAlertEnabled,
+    examDeliveryOffAlertEnabled: !!examDeliveryOffAlertEnabled,
   });
 });
 
@@ -1655,6 +1663,19 @@ app.post("/out-of-hostel-alert-status", (req, res) => {
   outOfHostelAlertEnabled = !!req.body.outOfHostelAlertEnabled;
   saveData();
   return res.json({ status: "ok", outOfHostelAlertEnabled });
+});
+
+app.get("/exam-delivery-alert-status", (req, res) => {
+  return res.json({ examDeliveryOffAlertEnabled: !!examDeliveryOffAlertEnabled });
+});
+
+app.post("/exam-delivery-alert-status", (req, res) => {
+  if (typeof req.body?.examDeliveryOffAlertEnabled !== "boolean") {
+    return res.status(400).json({ status: "error", message: "examDeliveryOffAlertEnabled must be true/false" });
+  }
+  examDeliveryOffAlertEnabled = !!req.body.examDeliveryOffAlertEnabled;
+  saveData();
+  return res.json({ status: "ok", examDeliveryOffAlertEnabled });
 });
 
 app.get("/delivery-status", (req, res) => {
