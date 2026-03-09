@@ -226,6 +226,13 @@ function mergeProductMap(baseMap, incomingMap, fallbackValue = 0) {
   return out;
 }
 
+function normalizeSellPriceMap(rawMap) {
+  const out = mergeProductMap(defaultSellPrice, rawMap, 0);
+  // Keep Kurkure fixed at Rs 30 even if older DB data still has Rs 20.
+  out.Kurkure = 30;
+  return out;
+}
+
 function saveData() {
   StoreState.findOneAndUpdate(
     { singletonKey: "main" },
@@ -298,7 +305,7 @@ async function loadStateFromMongo() {
     ? Number(doc.totalProfitAdjustment)
     : DEFAULT_TOTAL_PROFIT_ADJUSTMENT;
   buyPrice = mergeProductMap(defaultBuyPrice, migratedBuyPrice, 0);
-  sellPrice = mergeProductMap(defaultSellPrice, migratedSellPrice, 0);
+  sellPrice = normalizeSellPriceMap(migratedSellPrice);
   distributorStock = normalizeDistributorStock(migratedDistributorStock);
   storeClosed = !!doc.storeClosed;
   roomDeliveryBlocked = !!doc.roomDeliveryBlocked;
@@ -916,7 +923,7 @@ app.post("/sell-price", (req, res) => {
   if (!nextSell || typeof nextSell !== "object") {
     return res.status(400).json({ status: "error", message: "Invalid sell price data" });
   }
-  sellPrice = nextSell;
+  sellPrice = normalizeSellPriceMap(nextSell);
   saveData();
   res.json({ status: "saved" });
 });
