@@ -545,20 +545,12 @@ function applyMonthlyManualCustomers(spendMap, month) {
   Object.keys(monthlyBucket).forEach((key) => {
     const row = monthlyBucket[key];
     if (!row) return;
-    const totalSpent = Math.max(0, Number(row.totalSpent) || 0);
-    const ordersCount = Math.max(0, Number(row.ordersCount) || 0);
-    if (!spendMap[key]) {
-      spendMap[key] = {
-        name: String(row.name || "").trim() || "Unknown",
-        room: String(row.room || "").trim() || "-",
-        totalSpent: 0,
-        ordersCount: 0,
-      };
-    }
-    spendMap[key].name = String(row.name || spendMap[key].name || "").trim() || "Unknown";
-    spendMap[key].room = String(row.room || spendMap[key].room || "").trim() || "-";
-    spendMap[key].totalSpent += totalSpent;
-    spendMap[key].ordersCount += ordersCount;
+    spendMap[key] = {
+      name: String(row.name || "").trim() || "Unknown",
+      room: String(row.room || "").trim() || "-",
+      totalSpent: Math.max(0, Number(row.totalSpent) || 0),
+      ordersCount: Math.max(0, Number(row.ordersCount) || 0),
+    };
   });
 }
 
@@ -605,20 +597,12 @@ function applyLifetimeManualCustomers(spendMap) {
   Object.keys(lifetimeBucket).forEach((key) => {
     const row = lifetimeBucket[key];
     if (!row) return;
-    const totalSpent = Math.max(0, Number(row.totalSpent) || 0);
-    const ordersCount = Math.max(0, Number(row.ordersCount) || 0);
-    if (!spendMap[key]) {
-      spendMap[key] = {
-        name: String(row.name || "").trim() || "Unknown",
-        room: String(row.room || "").trim() || "-",
-        totalSpent: 0,
-        ordersCount: 0,
-      };
-    }
-    spendMap[key].name = String(row.name || spendMap[key].name || "").trim() || "Unknown";
-    spendMap[key].room = String(row.room || spendMap[key].room || "").trim() || "-";
-    spendMap[key].totalSpent += totalSpent;
-    spendMap[key].ordersCount += ordersCount;
+    spendMap[key] = {
+      name: String(row.name || "").trim() || "Unknown",
+      room: String(row.room || "").trim() || "-",
+      totalSpent: Math.max(0, Number(row.totalSpent) || 0),
+      ordersCount: Math.max(0, Number(row.ordersCount) || 0),
+    };
   });
 }
 
