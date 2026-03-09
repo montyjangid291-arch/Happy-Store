@@ -1,13 +1,11 @@
 {
   "storeStock": {
-    "Maggi": 2,
-    "Kurkure": 0,
-    "Bhujia": 0,
-    "Namkeen": 0,
-    "Bhoot Chips": 0,
-    "Onion Chips": 0,
-    "Unibic Chocolate Chip Cookies": 0,
-    "Unibic Chocokiss": 0
+    "Maggi": 24,
+    "Kurkure": 10,
+    "Bhujia": 3,
+    "Ariel": 0,
+    "Bhoot Chips": 44,
+    "Bingo Onion Chips": 23
   },
   "orders": [
     {
@@ -722,32 +720,6 @@
       "status": "active",
       "cancelledAt": null,
       "profit": 200
-    },
-    {
-      "name": "cssx",
-      "room": "045",
-      "mode": "pickup",
-      "paymentMode": "cash",
-      "deliveryType": "Self Pickup",
-      "collectFromRoom": "104",
-      "assignedWhatsappPhone": "919983729301",
-      "deliveryCharge": 0,
-      "items": [
-        {
-          "name": "Namkeen",
-          "price": 50,
-          "qty": 2,
-          "sellPriceAtOrder": 50,
-          "buyPriceAtOrder": 30.5
-        }
-      ],
-      "total": 100,
-      "id": 1772302611904,
-      "time": "28/2/2026, 11:46:51 pm",
-      "createdAt": "2026-02-28T18:16:51.906Z",
-      "status": "active",
-      "cancelledAt": null,
-      "profit": 39
     }
   ],
   "buyPrice": {
@@ -757,8 +729,7 @@
     "Namkeen": 30.5,
     "Bhoot Chips": 0,
     "Onion Chips": 25,
-    "Unibic Chocolate Chip Cookies": 20,
-    "Unibic Chocokiss": 0
+    "Unibic Chocolate Chip Cookies": 20
   },
   "sellPrice": {
     "Maggi": 20,
@@ -767,8 +738,7 @@
     "Namkeen": 50,
     "Bhoot Chips": 20,
     "Onion Chips": 30,
-    "Unibic Chocolate Chip Cookies": 30,
-    "Unibic Chocokiss": 120
+    "Unibic Chocolate Chip Cookies": 30
   },
   "distributorStock": {
     "104": {
@@ -777,8 +747,7 @@
       "Bhujia": -2,
       "Ariel": 0,
       "Bhoot Chips": 0,
-      "Bingo Onion Chips": 0,
-      "Namkeen": -2
+      "Bingo Onion Chips": 0
     },
     "407": {
       "Maggi": 0,
@@ -798,3 +767,4 @@
     }
   }
 }
+
