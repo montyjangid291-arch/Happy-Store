@@ -10,7 +10,12 @@ app.use(express.static(__dirname));
 
 const defaultStock = {
   Maggi: 24,
-  Kurkure: 9,
+  "Tedhe Medhe": 9,
+  Kurkure: 5,
+  "Oreo 41gm": 5,
+  "Oreo 108gm": 5,
+  "Dark Fantasy": 5,
+  Borboun: 5,
   Bhujia: 2,
   Namkeen: 2,
   "Onion Chips": 5,
@@ -22,7 +27,12 @@ const defaultStock = {
 
 const defaultBuyPrice = {
   Maggi: 0,
+  "Tedhe Medhe": 0,
   Kurkure: 0,
+  "Oreo 41gm": 0,
+  "Oreo 108gm": 0,
+  "Dark Fantasy": 0,
+  Borboun: 0,
   Bhujia: 0,
   Namkeen: 0,
   "Onion Chips": 0,
@@ -34,7 +44,12 @@ const defaultBuyPrice = {
 
 const defaultSellPrice = {
   Maggi: 20,
-  Kurkure: 20,
+  "Tedhe Medhe": 20,
+  Kurkure: 30,
+  "Oreo 41gm": 10,
+  "Oreo 108gm": 30,
+  "Dark Fantasy": 200,
+  Borboun: 25,
   Bhujia: 300,
   Namkeen: 50,
   "Onion Chips": 30,
@@ -53,7 +68,12 @@ const DEFAULT_TOTAL_PROFIT_ADJUSTMENT = 1044;
 function getDefaultProductMap(fillValue) {
   return {
     Maggi: fillValue,
+    "Tedhe Medhe": fillValue,
     Kurkure: fillValue,
+    "Oreo 41gm": fillValue,
+    "Oreo 108gm": fillValue,
+    "Dark Fantasy": fillValue,
+    Borboun: fillValue,
     Bhujia: fillValue,
     Namkeen: fillValue,
     "Onion Chips": fillValue,
@@ -62,6 +82,23 @@ function getDefaultProductMap(fillValue) {
     "Unibic Kesar Cashew Badam Cookies": fillValue,
     "Unibic Chocokiss": fillValue,
   };
+}
+
+function migrateLegacyProductMap(rawMap) {
+  const next = rawMap && typeof rawMap === "object" ? { ...rawMap } : {};
+  if (next["Tedhe Medhe"] === undefined && next.Kurkure !== undefined) {
+    next["Tedhe Medhe"] = next.Kurkure;
+  }
+  return next;
+}
+
+function migrateLegacyDistributorStock(rawStock) {
+  if (!rawStock || typeof rawStock !== "object") return rawStock;
+  const next = { ...rawStock };
+  ["104", "407", "607"].forEach((room) => {
+    next[room] = migrateLegacyProductMap(next[room]);
+  });
+  return next;
 }
 
 const defaultDistributorStock = {
@@ -246,7 +283,12 @@ async function loadStateFromMongo() {
     return;
   }
 
-  storeStock = mergeProductMap(defaultStock, doc.storeStock, 0);
+  const migratedStoreStock = migrateLegacyProductMap(doc.storeStock);
+  const migratedBuyPrice = migrateLegacyProductMap(doc.buyPrice);
+  const migratedSellPrice = migrateLegacyProductMap(doc.sellPrice);
+  const migratedDistributorStock = migrateLegacyDistributorStock(doc.distributorStock);
+
+  storeStock = mergeProductMap(defaultStock, migratedStoreStock, 0);
   orders = Array.isArray(doc.orders) ? doc.orders : [];
   pushSubscriptions = normalizePushSubscriptions(doc.pushSubscriptions);
   manualCustomers = normalizeManualCustomers(doc.manualCustomers);
@@ -255,9 +297,9 @@ async function loadStateFromMongo() {
   totalProfitAdjustment = Number.isFinite(Number(doc.totalProfitAdjustment))
     ? Number(doc.totalProfitAdjustment)
     : DEFAULT_TOTAL_PROFIT_ADJUSTMENT;
-  buyPrice = mergeProductMap(defaultBuyPrice, doc.buyPrice, 0);
-  sellPrice = mergeProductMap(defaultSellPrice, doc.sellPrice, 0);
-  distributorStock = normalizeDistributorStock(doc.distributorStock);
+  buyPrice = mergeProductMap(defaultBuyPrice, migratedBuyPrice, 0);
+  sellPrice = mergeProductMap(defaultSellPrice, migratedSellPrice, 0);
+  distributorStock = normalizeDistributorStock(migratedDistributorStock);
   storeClosed = !!doc.storeClosed;
   roomDeliveryBlocked = !!doc.roomDeliveryBlocked;
   autoCloseAt1230Enabled = !!doc.autoCloseAt1230Enabled;

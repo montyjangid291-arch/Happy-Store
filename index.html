@@ -393,9 +393,9 @@ input:focus, select:focus {
     <button class="btn addCartBtn" onclick="addToCart(this, 20, 'qty1')">Add</button>
   </div>
 
-  <div class="card" data-name="Kurkure">
-    <img src="kurkure.jpg" alt="Kurkure">
-    <h3>Kurkure</h3>
+  <div class="card" data-name="Tedhe Medhe">
+    <img src="kurkure.jpg" alt="Tedhe Medhe">
+    <h3>Tedhe Medhe</h3>
     <div class="weight">75g Pack</div>
     <div class="price">Rs 20</div>
     <div class="stock"></div>
@@ -405,6 +405,76 @@ input:focus, select:focus {
       <button class="qtyBtn" onclick="adjustQty('qty2', 1)" type="button">+</button>
     </div><br>
     <button class="btn addCartBtn" onclick="addToCart(this, 20, 'qty2')">Add</button>
+  </div>
+
+  <div class="card" data-name="Kurkure">
+    <img src="tedhe medhe.jfif" alt="Kurkure">
+    <h3>Kurkure</h3>
+    <div class="weight">103 gm</div>
+    <div class="price">Rs 30</div>
+    <div class="stock"></div>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty13', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty13" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty13', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 30, 'qty13')">Add</button>
+  </div>
+
+  <div class="card" data-name="Oreo 41gm">
+    <img src="oreo.jfif" alt="Oreo 41gm">
+    <h3>Oreo</h3>
+    <div class="weight">41 gm</div>
+    <div class="price">Rs 10</div>
+    <div class="stock"></div>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty14', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty14" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty14', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 10, 'qty14')">Add</button>
+  </div>
+
+  <div class="card" data-name="Oreo 108gm">
+    <img src="oreo.jfif" alt="Oreo 108gm">
+    <h3>Oreo</h3>
+    <div class="weight">108 gm</div>
+    <div class="price">Rs 30</div>
+    <div class="stock"></div>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty15', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty15" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty15', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 30, 'qty15')">Add</button>
+  </div>
+
+  <div class="card" data-name="Dark Fantasy">
+    <img src="dark fantasy.jfif" alt="Dark Fantasy">
+    <h3>Dark Fantasy</h3>
+    <div class="weight">460 gm</div>
+    <div class="price">Rs 200</div>
+    <div class="stock"></div>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty16', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty16" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty16', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 200, 'qty16')">Add</button>
+  </div>
+
+  <div class="card" data-name="Borboun">
+    <img src="borboun.jfif" alt="Borboun">
+    <h3>Borboun</h3>
+    <div class="weight">108 gm</div>
+    <div class="price">Rs 25</div>
+    <div class="stock"></div>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty17', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty17" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty17', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 25, 'qty17')">Add</button>
   </div>
 
   <div class="card" data-name="Onion Chips">
@@ -551,7 +621,12 @@ input:focus, select:focus {
       <div class="adminStockCol">
         <h4 style="margin:0 0 8px 0;">Stock Add Entry (+/-)</h4>
         <div class="stockEditorRow">Maggi <input id="sMaggi" type="number"></div>
+        <div class="stockEditorRow">Tedhe Medhe <input id="sTedheMedhe" type="number"></div>
         <div class="stockEditorRow">Kurkure <input id="sKurkure" type="number"></div>
+        <div class="stockEditorRow">Oreo 41gm <input id="sOreo41gm" type="number"></div>
+        <div class="stockEditorRow">Oreo 108gm <input id="sOreo108gm" type="number"></div>
+        <div class="stockEditorRow">Dark Fantasy <input id="sDarkFantasy" type="number"></div>
+        <div class="stockEditorRow">Borboun <input id="sBorboun" type="number"></div>
         <div class="stockEditorRow">Bhujia <input id="sBhujia" type="number"></div>
         <div class="stockEditorRow">Namkeen <input id="sNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips <input id="sOnionChips" type="number"></div>
@@ -566,7 +641,12 @@ input:focus, select:focus {
           <h4 style="margin:0 0 8px 0;">Offline Sale Quick Entry</h4>
           <select id="offlineSaleItem" onchange="syncOfflineSaleDefaultPrices()" style="width:100%;margin-bottom:6px;">
             <option value="Maggi">Maggi</option>
+            <option value="Tedhe Medhe">Tedhe Medhe</option>
             <option value="Kurkure">Kurkure</option>
+            <option value="Oreo 41gm">Oreo 41gm</option>
+            <option value="Oreo 108gm">Oreo 108gm</option>
+            <option value="Dark Fantasy">Dark Fantasy</option>
+            <option value="Borboun">Borboun</option>
             <option value="Bhujia">Bhujia</option>
             <option value="Namkeen">Namkeen</option>
             <option value="Onion Chips">Onion Chips</option>
@@ -634,7 +714,12 @@ input:focus, select:focus {
       <div class="priceCol">
         <h4>Buy Price (Left)</h4>
         <div class="stockEditorRow">Maggi Buy Rs <input id="bMaggi" type="number"></div>
+        <div class="stockEditorRow">Tedhe Medhe Buy Rs <input id="bTedheMedhe" type="number"></div>
         <div class="stockEditorRow">Kurkure Buy Rs <input id="bKurkure" type="number"></div>
+        <div class="stockEditorRow">Oreo 41gm Buy Rs <input id="bOreo41gm" type="number"></div>
+        <div class="stockEditorRow">Oreo 108gm Buy Rs <input id="bOreo108gm" type="number"></div>
+        <div class="stockEditorRow">Dark Fantasy Buy Rs <input id="bDarkFantasy" type="number"></div>
+        <div class="stockEditorRow">Borboun Buy Rs <input id="bBorboun" type="number"></div>
         <div class="stockEditorRow">Bhujia Buy Rs <input id="bBhujia" type="number"></div>
         <div class="stockEditorRow">Namkeen Buy Rs <input id="bNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips Buy Rs <input id="bOnionChips" type="number"></div>
@@ -647,7 +732,12 @@ input:focus, select:focus {
       <div class="priceCol">
         <h4>Sell Price (Right)</h4>
         <div class="stockEditorRow">Maggi Sell Rs <input id="spMaggi" type="number"></div>
+        <div class="stockEditorRow">Tedhe Medhe Sell Rs <input id="spTedheMedhe" type="number"></div>
         <div class="stockEditorRow">Kurkure Sell Rs <input id="spKurkure" type="number"></div>
+        <div class="stockEditorRow">Oreo 41gm Sell Rs <input id="spOreo41gm" type="number"></div>
+        <div class="stockEditorRow">Oreo 108gm Sell Rs <input id="spOreo108gm" type="number"></div>
+        <div class="stockEditorRow">Dark Fantasy Sell Rs <input id="spDarkFantasy" type="number"></div>
+        <div class="stockEditorRow">Borboun Sell Rs <input id="spBorboun" type="number"></div>
         <div class="stockEditorRow">Bhujia Sell Rs <input id="spBhujia" type="number"></div>
         <div class="stockEditorRow">Namkeen Sell Rs <input id="spNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips Sell Rs <input id="spOnionChips" type="number"></div>
@@ -684,7 +774,12 @@ input:focus, select:focus {
 <script>
 let realPrice = {
   Maggi: 20,
-  Kurkure: 20,
+  "Tedhe Medhe": 20,
+  Kurkure: 30,
+  "Oreo 41gm": 10,
+  "Oreo 108gm": 30,
+  "Dark Fantasy": 200,
+  Borboun: 25,
   Bhujia: 300,
   Namkeen: 50,
   "Onion Chips": 30,
@@ -702,7 +797,12 @@ let cart = [];
 let stockData = {};
 const STOCK_INPUT_FIELD_MAP = {
   Maggi: "sMaggi",
+  "Tedhe Medhe": "sTedheMedhe",
   Kurkure: "sKurkure",
+  "Oreo 41gm": "sOreo41gm",
+  "Oreo 108gm": "sOreo108gm",
+  "Dark Fantasy": "sDarkFantasy",
+  Borboun: "sBorboun",
   Bhujia: "sBhujia",
   Namkeen: "sNamkeen",
   "Onion Chips": "sOnionChips",
@@ -713,7 +813,12 @@ const STOCK_INPUT_FIELD_MAP = {
 };
 const BUY_PRICE_INPUT_FIELD_MAP = {
   Maggi: "bMaggi",
+  "Tedhe Medhe": "bTedheMedhe",
   Kurkure: "bKurkure",
+  "Oreo 41gm": "bOreo41gm",
+  "Oreo 108gm": "bOreo108gm",
+  "Dark Fantasy": "bDarkFantasy",
+  Borboun: "bBorboun",
   Bhujia: "bBhujia",
   Namkeen: "bNamkeen",
   "Onion Chips": "bOnionChips",
@@ -1396,19 +1501,19 @@ function getDistributorStockPayloadFromInputs() {
   return {
     "104": {
       Maggi: Number(getById("d104Maggi").value) || 0,
-      Kurkure: Number(getById("d104Kurkure").value) || 0,
+      "Tedhe Medhe": Number(getById("d104Kurkure").value) || 0,
       Bhujia: Number(getById("d104Bhujia").value) || 0,
       Ariel: Number(getById("d104Ariel").value) || 0
     },
     "407": {
       Maggi: Number(getById("d407Maggi").value) || 0,
-      Kurkure: Number(getById("d407Kurkure").value) || 0,
+      "Tedhe Medhe": Number(getById("d407Kurkure").value) || 0,
       Bhujia: Number(getById("d407Bhujia").value) || 0,
       Ariel: Number(getById("d407Ariel").value) || 0
     },
     "607": {
       Maggi: Number(getById("d607Maggi").value) || 0,
-      Kurkure: Number(getById("d607Kurkure").value) || 0,
+      "Tedhe Medhe": Number(getById("d607Kurkure").value) || 0,
       Bhujia: Number(getById("d607Bhujia").value) || 0,
       Ariel: Number(getById("d607Ariel").value) || 0
     }
@@ -1440,17 +1545,17 @@ function fillDistributorStockInputs(data) {
   const s407 = data["407"] || {};
   const s607 = data["607"] || {};
   getById("d104Maggi").value = Number(s104.Maggi || 0);
-  getById("d104Kurkure").value = Number(s104.Kurkure || 0);
+  getById("d104Kurkure").value = Number(s104["Tedhe Medhe"] || s104.Kurkure || 0);
   getById("d104Bhujia").value = Number(s104.Bhujia || 0);
   getById("d104Ariel").value = Number(s104.Ariel || 0);
 
   getById("d407Maggi").value = Number(s407.Maggi || 0);
-  getById("d407Kurkure").value = Number(s407.Kurkure || 0);
+  getById("d407Kurkure").value = Number(s407["Tedhe Medhe"] || s407.Kurkure || 0);
   getById("d407Bhujia").value = Number(s407.Bhujia || 0);
   getById("d407Ariel").value = Number(s407.Ariel || 0);
 
   getById("d607Maggi").value = Number(s607.Maggi || 0);
-  getById("d607Kurkure").value = Number(s607.Kurkure || 0);
+  getById("d607Kurkure").value = Number(s607["Tedhe Medhe"] || s607.Kurkure || 0);
   getById("d607Bhujia").value = Number(s607.Bhujia || 0);
   getById("d607Ariel").value = Number(s607.Ariel || 0);
 }
@@ -2178,7 +2283,12 @@ async function loadBuyPriceFromServer() {
     const buy = await res.json();
 
     getById("bMaggi").value = Number(buy.Maggi || 0);
+    getById("bTedheMedhe").value = Number(buy["Tedhe Medhe"] || buy.Kurkure || 0);
     getById("bKurkure").value = Number(buy.Kurkure || 0);
+    getById("bOreo41gm").value = Number(buy["Oreo 41gm"] || 0);
+    getById("bOreo108gm").value = Number(buy["Oreo 108gm"] || 0);
+    getById("bDarkFantasy").value = Number(buy["Dark Fantasy"] || 0);
+    getById("bBorboun").value = Number(buy.Borboun || 0);
     getById("bBhujia").value = Number(buy.Bhujia || 0);
     getById("bNamkeen").value = Number(buy.Namkeen || 0);
     getById("bOnionChips").value = Number(buy["Onion Chips"] || 0);
@@ -2216,7 +2326,12 @@ async function loadSellPriceFromServer() {
     realPrice = {
       ...realPrice,
       Maggi: pick("Maggi", Number(realPrice.Maggi || 20)),
-      Kurkure: pick("Kurkure", Number(realPrice.Kurkure || 20)),
+      "Tedhe Medhe": pick("Tedhe Medhe", Number(realPrice["Tedhe Medhe"] || 20)),
+      Kurkure: pick("Kurkure", Number(realPrice.Kurkure || 30)),
+      "Oreo 41gm": pick("Oreo 41gm", Number(realPrice["Oreo 41gm"] || 10)),
+      "Oreo 108gm": pick("Oreo 108gm", Number(realPrice["Oreo 108gm"] || 30)),
+      "Dark Fantasy": pick("Dark Fantasy", Number(realPrice["Dark Fantasy"] || 200)),
+      Borboun: pick("Borboun", Number(realPrice.Borboun || 25)),
       Bhujia: pick("Bhujia", Number(realPrice.Bhujia || 300)),
       Namkeen: pick("Namkeen", Number(realPrice.Namkeen || 50)),
       "Onion Chips": pick("Onion Chips", Number(realPrice["Onion Chips"] || 30)),
@@ -2227,7 +2342,12 @@ async function loadSellPriceFromServer() {
     };
 
     getById("spMaggi").value = Number(realPrice.Maggi || 0);
+    getById("spTedheMedhe").value = Number(realPrice["Tedhe Medhe"] || 0);
     getById("spKurkure").value = Number(realPrice.Kurkure || 0);
+    getById("spOreo41gm").value = Number(realPrice["Oreo 41gm"] || 0);
+    getById("spOreo108gm").value = Number(realPrice["Oreo 108gm"] || 0);
+    getById("spDarkFantasy").value = Number(realPrice["Dark Fantasy"] || 0);
+    getById("spBorboun").value = Number(realPrice.Borboun || 0);
     getById("spBhujia").value = Number(realPrice.Bhujia || 0);
     getById("spNamkeen").value = Number(realPrice.Namkeen || 0);
     getById("spOnionChips").value = Number(realPrice["Onion Chips"] || 0);
@@ -2248,7 +2368,12 @@ async function saveBuyPrice() {
   if (password === null) return;
   const buy = {
     Maggi: +getById("bMaggi").value,
+    "Tedhe Medhe": +getById("bTedheMedhe").value,
     Kurkure: +getById("bKurkure").value,
+    "Oreo 41gm": +getById("bOreo41gm").value,
+    "Oreo 108gm": +getById("bOreo108gm").value,
+    "Dark Fantasy": +getById("bDarkFantasy").value,
+    Borboun: +getById("bBorboun").value,
     Bhujia: +getById("bBhujia").value,
     Namkeen: +getById("bNamkeen").value,
     "Onion Chips": +getById("bOnionChips").value,
@@ -2279,7 +2404,12 @@ async function saveSellPrice() {
   if (password === null) return;
   const sell = {
     Maggi: +getById("spMaggi").value,
+    "Tedhe Medhe": +getById("spTedheMedhe").value,
     Kurkure: +getById("spKurkure").value,
+    "Oreo 41gm": +getById("spOreo41gm").value,
+    "Oreo 108gm": +getById("spOreo108gm").value,
+    "Dark Fantasy": +getById("spDarkFantasy").value,
+    Borboun: +getById("spBorboun").value,
     Bhujia: +getById("spBhujia").value,
     Namkeen: +getById("spNamkeen").value,
     "Onion Chips": +getById("spOnionChips").value,
