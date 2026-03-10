@@ -713,7 +713,7 @@ input:focus, select:focus {
       </div>
     </div>
 
-    <div style="font-size:12px;color:#666;margin-top:6px;">Buy/Sell price save karne ke liye password required hai.</div>
+    <div style="font-size:12px;color:#666;margin-top:6px;">Buy/Sell price aur finance details sirf admin login ke baad available hain.</div>
     <div id="totalProfitBox">Total Profit (All Time): Rs 0</div>
     <div id="profitBox">Today Profit: Rs 0</div>
     <div id="monthProfitBox">This Month Profit: Rs 0</div>
@@ -793,6 +793,7 @@ let closingSoonAlertEnabled = false;
 let sleepingCallAlertEnabled = false;
 let outOfHostelAlertEnabled = false;
 let examDeliveryOffAlertEnabled = false;
+let adminLoggedIn = false;
 let orderCounter = parseInt(localStorage.getItem("orderNo") || "1001", 10);
 let lastSeenOrderId = null;
 let lastSeenOrderCount = 0;
@@ -823,6 +824,7 @@ const DISTRIBUTOR_STOCK_CACHE_KEY = "mm_distributor_stock_cache";
 let adminTapCount = 0;
 let adminTapResetTimer = null;
 let cancelUiTimer = null;
+let adminOrderMonitorTimer = null;
 let pushInitDone = false;
 let pushPublicKey = "";
 
@@ -1024,10 +1026,15 @@ async function apiFetch(path, options) {
     ? [ACTIVE_API_BASE, ...getApiCandidates().filter((b) => b !== ACTIVE_API_BASE)]
     : getApiCandidates();
 
+  const requestOptions = {
+    credentials: "include",
+    ...(options || {})
+  };
+
   let lastError = null;
   for (const base of candidates) {
     try {
-      const res = await fetch(buildApiUrl(base, path), options);
+      const res = await fetch(buildApiUrl(base, path), requestOptions);
       const ctype = (res.headers && res.headers.get && res.headers.get("content-type")) || "";
       // Wrong origin commonly returns 404/405 or HTML error page; try next candidate.
       if (res.status === 404 || res.status === 405 || res.status === 501) {
@@ -1044,6 +1051,9 @@ async function apiFetch(path, options) {
       }
       // For valid non-404 responses (including 4xx business errors), stop here.
       ACTIVE_API_BASE = base;
+      if (res.status === 401) {
+        adminLoggedIn = false;
+      }
       return res;
     } catch (err) {
       lastError = err;
@@ -1057,6 +1067,76 @@ async function safeJson(res) {
     return await res.json();
   } catch (_e) {
     return {};
+  }
+}
+
+function setAdminSurfaceVisible(show) {
+  const topBox = getById("topCustomersBox");
+  if (topBox) {
+    topBox.style.display = show ? "block" : "none";
+  }
+  if (!show) {
+    getById("adminPanel").style.display = "none";
+    setFinanceSectionVisibility(false);
+  }
+}
+
+async function ensureAdminSession(forcePrompt) {
+  if (!forcePrompt) {
+    try {
+      const sessionRes = await apiFetch(`/admin/session?nocache=${Date.now()}`);
+      if (sessionRes.ok) {
+        adminLoggedIn = true;
+        return true;
+      }
+    } catch (_err) {}
+  }
+
+  const entered = prompt("Admin password?");
+  if (entered === null) return false;
+  if (!String(entered).trim()) {
+    alert("Password required");
+    return false;
+  }
+
+  try {
+    const res = await apiFetch("/admin/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: String(entered).trim() })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "ok") {
+      throw new Error(data.message || "Admin login failed");
+    }
+    adminLoggedIn = true;
+    return true;
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Admin login failed");
+    return false;
+  }
+}
+
+function handleAdminSessionExpired(message) {
+  adminLoggedIn = false;
+  if (adminOrderMonitorTimer) {
+    clearInterval(adminOrderMonitorTimer);
+    adminOrderMonitorTimer = null;
+  }
+  setAdminSurfaceVisible(false);
+  alert(message || "Admin session expired. Login again.");
+}
+
+async function restoreAdminSessionSilently() {
+  try {
+    const res = await apiFetch(`/admin/session?nocache=${Date.now()}`);
+    if (!res.ok) return false;
+    adminLoggedIn = true;
+    startAdminOrderMonitor();
+    return true;
+  } catch (_err) {
+    return false;
   }
 }
 
@@ -1216,6 +1296,50 @@ async function playOrderAlertIfNeeded() {
     console.log("Order alert play failed:", err);
     playBeepFallback();
   }
+}
+
+function updateLatestOrderSeenState(allOrders) {
+  const newestOrder = allOrders.length ? allOrders[allOrders.length - 1] : null;
+  const newestOrderId = newestOrder ? Number(newestOrder.id || 0) : 0;
+  const isNewById = lastSeenOrderId !== null && newestOrderId > lastSeenOrderId;
+  const isNewByCount = lastSeenOrderCount > 0 && allOrders.length > lastSeenOrderCount;
+
+  if (isNewById || (newestOrderId === 0 && isNewByCount)) {
+    playOrderAlertIfNeeded();
+  }
+
+  if (newestOrderId > 0) lastSeenOrderId = newestOrderId;
+  lastSeenOrderCount = allOrders.length;
+}
+
+async function pollAdminOrdersForAlerts() {
+  if (!adminLoggedIn) return;
+  try {
+    const res = await apiFetch(`/orders?nocache=${Date.now()}`);
+    if (res.status === 401) {
+      handleAdminSessionExpired("Admin session expired. Order alerts ke liye dobara login karo.");
+      return;
+    }
+    if (!res.ok) throw new Error("orders monitor failed");
+    const orders = await res.json();
+    const allOrders = Array.isArray(orders) ? orders : [];
+    latestOrdersCache = allOrders;
+    updateLatestOrderSeenState(allOrders);
+  } catch (err) {
+    console.log("Admin order monitor stopped:", err);
+  }
+}
+
+function startAdminOrderMonitor() {
+  if (adminOrderMonitorTimer) {
+    clearInterval(adminOrderMonitorTimer);
+    adminOrderMonitorTimer = null;
+  }
+  if (!adminLoggedIn) return;
+  pollAdminOrdersForAlerts();
+  adminOrderMonitorTimer = setInterval(() => {
+    pollAdminOrdersForAlerts();
+  }, 5000);
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -1991,17 +2115,16 @@ async function placeOrder() {
   // WhatsApp already attempted immediately above.
 }
 
-function showAdmin() {
-  if (!localStorage.getItem("adminPass")) localStorage.setItem("adminPass", "291");
-  const entered = prompt("Admin password?");
-  if (entered !== localStorage.getItem("adminPass")) {
-    alert("Wrong password");
-    return;
-  }
+async function showAdmin() {
+  const ok = await ensureAdminSession(false);
+  if (!ok) return;
+  setAdminSurfaceVisible(true);
+  startAdminOrderMonitor();
   getById("adminPanel").style.display = "block";
   loadBuyPriceFromServer();
   loadSellPriceFromServer();
   refreshTodayReport(false);
+  loadTopCustomers();
   loadAdminCustomersReport();
   loadLifetimeCustomersReport();
   loadOrders();
@@ -2024,13 +2147,6 @@ function toggleFinanceSection() {
   const isVisible = box.style.display !== "none";
   if (isVisible) {
     setFinanceSectionVisibility(false);
-    return;
-  }
-  const pass = prompt("Enter admin password to view finance");
-  if (pass === null) return;
-  const adminPass = localStorage.getItem("adminPass") || "291";
-  if (String(pass) !== String(adminPass)) {
-    alert("Wrong password");
     return;
   }
   setFinanceSectionVisibility(true);
@@ -2156,16 +2272,8 @@ async function saveOfflineSale() {
     return;
   }
 
-  const pass = prompt("Enter password for offline sale entry");
-  if (pass === null) return;
-  if (!pass.trim()) {
-    setOfflineSaleStatus("Password required", true);
-    return;
-  }
-
   try {
     const body = {
-      password: pass.trim(),
       itemName,
       qty
     };
@@ -2270,7 +2378,7 @@ function renderSellPriceCards() {
 
 async function loadSellPriceFromServer() {
   try {
-    const res = await apiFetch(`/sell-price?nocache=${Date.now()}`);
+    const res = await apiFetch(`/storefront-prices?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("sell price fetch failed");
     const sell = await res.json();
     const pick = (key, fallback) => {
@@ -2316,8 +2424,6 @@ async function loadSellPriceFromServer() {
 }
 
 async function saveBuyPrice() {
-  const password = prompt("Enter password to update BUY prices");
-  if (password === null) return;
   const buy = {
     Maggi: +getById("bMaggi").value,
     "Tedhe Medhe": +getById("bTedheMedhe").value,
@@ -2336,7 +2442,7 @@ async function saveBuyPrice() {
     const res = await apiFetch("/buy-price", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: password.trim(), prices: buy })
+      body: JSON.stringify({ prices: buy })
     });
     const data = await safeJson(res);
     if (!res.ok || data.status !== "saved") throw new Error(data.message || "buy price save failed");
@@ -2350,8 +2456,6 @@ async function saveBuyPrice() {
 }
 
 async function saveSellPrice() {
-  const password = prompt("Enter password to update SELL prices");
-  if (password === null) return;
   const sell = {
     Maggi: +getById("spMaggi").value,
     "Tedhe Medhe": +getById("spTedheMedhe").value,
@@ -2370,7 +2474,7 @@ async function saveSellPrice() {
     const res = await apiFetch("/sell-price", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: password.trim(), prices: sell })
+      body: JSON.stringify({ prices: sell })
     });
     const data = await safeJson(res);
     if (!res.ok || data.status !== "saved") throw new Error(data.message || "sell price save failed");
@@ -2386,6 +2490,7 @@ async function saveSellPrice() {
 }
 
 async function refreshTodayReport(showPopup) {
+  if (!adminLoggedIn) return;
   try {
     const res = await apiFetch(`/today-report?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("today report fetch failed");
@@ -2433,6 +2538,7 @@ async function refreshTodayReport(showPopup) {
 }
 
 async function loadOrders() {
+  if (!adminLoggedIn) return;
   try {
     const pageScrollY = window.scrollY;
     const prevSegmentScroll = [];
@@ -2444,22 +2550,16 @@ async function loadOrders() {
     }
 
     const res = await apiFetch(`/orders?nocache=${Date.now()}`);
+    if (res.status === 401) {
+      handleAdminSessionExpired("Admin session expired. Live orders dekhne ke liye dobara login karo.");
+      getById("liveOrders").innerHTML = "<h3>Live Orders</h3><div>Admin session expired. Login again.</div>";
+      return;
+    }
     if (!res.ok) throw new Error("orders fetch failed");
     const orders = await res.json();
     const allOrders = Array.isArray(orders) ? orders : [];
     latestOrdersCache = allOrders;
-
-    const newestOrder = allOrders.length ? allOrders[allOrders.length - 1] : null;
-    const newestOrderId = newestOrder ? Number(newestOrder.id || 0) : 0;
-    const isNewById = lastSeenOrderId !== null && newestOrderId > lastSeenOrderId;
-    const isNewByCount = lastSeenOrderCount > 0 && allOrders.length > lastSeenOrderCount;
-
-    if (isNewById || (newestOrderId === 0 && isNewByCount)) {
-      playOrderAlertIfNeeded();
-    }
-
-    if (newestOrderId > 0) lastSeenOrderId = newestOrderId;
-    lastSeenOrderCount = allOrders.length;
+    updateLatestOrderSeenState(allOrders);
 
     function orderCardHtml(o) {
       const orderStatus =
@@ -2773,6 +2873,7 @@ async function adminUpdateOrderStatus(orderId, action) {
 }
 
 async function loadTopCustomers() {
+  if (!adminLoggedIn) return;
   function monthKey(dateObj) {
     return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
   }
@@ -2785,14 +2886,19 @@ async function loadTopCustomers() {
   }
   function renderTop(data) {
     const top = Array.isArray(data.topCustomers) ? data.topCustomers : [];
+    const debug = data && typeof data.debug === "object" ? data.debug : {};
+    const countedOrders = Number(debug.countedOrders) || 0;
+    const excludedOrders = Number(debug.excludedOrders) || 0;
+    const cancelledOrders = Number(debug.cancelledOrders) || 0;
+    const debugLine = `<div style="font-size:12px;color:#5b6f82;margin-top:4px;">Counted orders: ${countedOrders} | Excluded: ${excludedOrders} | Cancelled: ${cancelledOrders}</div>`;
     if (top.length === 0) {
-      getById("topCustomersBox").innerText = "Top 3 Customers (This Month): No orders yet";
+      getById("topCustomersBox").innerHTML = `Top 3 Customers (This Month): No orders yet${debugLine}`;
       return;
     }
     const lines = top
       .map((c, idx) => `${idx + 1}) ${escapeHtml(c.name)} (Room ${escapeHtml(c.room)}) - Rs ${Number(c.totalSpent) || 0}`)
       .join("<br>");
-    getById("topCustomersBox").innerHTML = `Top 3 Customers (${escapeHtml(data.month)}):<br>${lines}`;
+    getById("topCustomersBox").innerHTML = `Top 3 Customers (${escapeHtml(data.month)}):<br>${lines}${debugLine}`;
   }
 
   try {
@@ -2808,11 +2914,20 @@ async function loadTopCustomers() {
       const orders = await res2.json();
       const month = monthKey(new Date());
       const spendMap = {};
+      let countedOrders = 0;
+      let excludedOrders = 0;
+      let cancelledOrders = 0;
       (Array.isArray(orders) ? orders : []).forEach((o) => {
-        if (o && o.status === "cancelled") return;
-        if (o && o.excludeFromCustomerStats === true) return;
         const dt = orderDate(o);
         if (!dt || monthKey(dt) !== month) return;
+        if (o && o.status === "cancelled") {
+          cancelledOrders += 1;
+          return;
+        }
+        if (o && o.excludeFromCustomerStats === true) {
+          excludedOrders += 1;
+          return;
+        }
         const key = `${String(o.name || "").trim()}|${String(o.room || "").trim()}`;
         if (!spendMap[key]) {
           spendMap[key] = {
@@ -2822,11 +2937,12 @@ async function loadTopCustomers() {
           };
         }
         spendMap[key].totalSpent += Number(o.total) || 0;
+        countedOrders += 1;
       });
       const topCustomers = Object.values(spendMap)
         .sort((a, b) => b.totalSpent - a.totalSpent)
         .slice(0, 3);
-      renderTop({ month, topCustomers });
+      renderTop({ month, topCustomers, debug: { countedOrders, excludedOrders, cancelledOrders } });
     } catch (err2) {
       console.error("Top customers fallback also failed:", err2);
       getById("topCustomersBox").innerText = "Top 3 Customers (This Month): Could not load";
@@ -2835,23 +2951,37 @@ async function loadTopCustomers() {
 }
 
 async function loadAdminCustomersReport() {
+  if (!adminLoggedIn) {
+    const ok = await ensureAdminSession(false);
+    if (!ok) {
+      getById("adminCustomersReport").innerHTML = "<div>Admin login required to load customer spending</div>";
+      return;
+    }
+  }
   try {
     const res = await apiFetch(`/customers-report?nocache=${Date.now()}`);
+    if (res.status === 401) {
+      handleAdminSessionExpired("Admin session expired. Customer spending reload ke liye dobara login karo.");
+      getById("adminCustomersReport").innerHTML = "<div>Admin session expired. Login again.</div>";
+      return;
+    }
     if (!res.ok) throw new Error("customers report fetch failed");
     const data = await res.json();
     const activeCustomers = Array.isArray(data.customers) ? data.customers : [];
     const allCustomers = Array.isArray(data.allCustomers) ? data.allCustomers : activeCustomers;
+    const excludedCustomers = Array.isArray(data.excludedCustomers) ? data.excludedCustomers : [];
     const source = activeCustomers.length ? activeCustomers : allCustomers;
     const customers = source.slice(0, 100);
     const totalCustomers = Number(data.totalCustomers);
     const activeCount = Number(data.activeCustomersCount);
+    const excludedCount = Number(data.excludedCustomersCount);
 
     if (customers.length === 0) {
       getById("adminCustomersReport").innerHTML = `<div>No customers found for ${data.month || "-"}</div>`;
       return;
     }
     let html = `<div><b>Month:</b> ${data.month}</div>`;
-    html += `<div><b>Total Customers:</b> ${Number.isFinite(totalCustomers) ? totalCustomers : allCustomers.length} | <b>Active Customers:</b> ${Number.isFinite(activeCount) ? activeCount : activeCustomers.length} | <b>Showing:</b> ${customers.length} (max 100)</div>`;
+    html += `<div><b>Total Customers:</b> ${Number.isFinite(totalCustomers) ? totalCustomers : allCustomers.length} | <b>Active Customers:</b> ${Number.isFinite(activeCount) ? activeCount : activeCustomers.length} | <b>Excluded Customers:</b> ${Number.isFinite(excludedCount) ? excludedCount : excludedCustomers.length} | <b>Showing:</b> ${customers.length} (max 100)</div>`;
     if (activeCustomers.length === 0 && allCustomers.length > 0) {
       html += `<div style="font-size:12px;color:#666;margin-top:4px;">Note: Active customers 0 hai kyunki month stats reset/excluded ho chuki hain. List all customers ki dikh rahi hai.</div>`;
     }
@@ -2867,6 +2997,22 @@ async function loadAdminCustomersReport() {
 </tr>`;
     });
     html += "</table>";
+    if (excludedCustomers.length) {
+      html += `<div style="margin-top:10px;"><b>Excluded From Top Customer / Active Stats</b></div>`;
+      html += `<div style="font-size:12px;color:#666;margin-top:4px;">In orders par customer money reset ya exclusion lag chuka hai.</div>`;
+      html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;">
+<tr><th style="border:1px solid #ccc;padding:6px;">#</th><th style="border:1px solid #ccc;padding:6px;">Name</th><th style="border:1px solid #ccc;padding:6px;">Room</th><th style="border:1px solid #ccc;padding:6px;">Orders</th><th style="border:1px solid #ccc;padding:6px;">Spent</th></tr>`;
+      excludedCustomers.slice(0, 100).forEach((c, idx) => {
+        html += `<tr>
+<td style="border:1px solid #ccc;padding:6px;">${idx + 1}</td>
+<td style="border:1px solid #ccc;padding:6px;">${c.name}</td>
+<td style="border:1px solid #ccc;padding:6px;">${c.room}</td>
+<td style="border:1px solid #ccc;padding:6px;">${c.ordersCount}</td>
+<td style="border:1px solid #ccc;padding:6px;">Rs ${c.totalSpent}</td>
+</tr>`;
+      });
+      html += "</table>";
+    }
     getById("adminCustomersReport").innerHTML = html;
   } catch (err) {
     console.error(err);
@@ -2954,18 +3100,11 @@ async function deleteManualCustomerSpend() {
 }
 
 async function resetCustomerMoney() {
-  const pass = prompt("Enter reset password");
-  if (pass === null) return;
-  if (!pass.trim()) {
-    alert("Password required");
-    return;
-  }
-
   try {
     const payload = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pass.trim() })
+      body: JSON.stringify({})
     };
 
     let res = await apiFetch("/admin/reset-customer-money", payload);
@@ -2990,18 +3129,11 @@ async function resetCustomerMoney() {
 }
 
 async function resetProfitTotals() {
-  const pass = prompt("Enter reset password for profit");
-  if (pass === null) return;
-  if (!pass.trim()) {
-    alert("Password required");
-    return;
-  }
-
   try {
     const payload = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pass.trim() })
+      body: JSON.stringify({})
     };
 
     let res = await apiFetch("/admin/reset-profit", payload);
@@ -3132,19 +3264,11 @@ async function setMonthProfitManually() {
     return;
   }
 
-  const pass = prompt("Enter password to set month profit");
-  if (pass === null) return;
-  if (!pass.trim()) {
-    alert("Password required");
-    return;
-  }
-
   try {
     const payload = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        password: pass.trim(),
         desiredMonthProfit,
       })
     };
@@ -3176,19 +3300,11 @@ async function setMonthDeliveryProfitManually() {
     return;
   }
 
-  const pass = prompt("Enter password to set room delivery month profit");
-  if (pass === null) return;
-  if (!pass.trim()) {
-    alert("Password required");
-    return;
-  }
-
   try {
     const payload = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        password: pass.trim(),
         desiredMonthDeliveryProfit,
       })
     };
@@ -3272,19 +3388,11 @@ async function setTotalProfitManually() {
     return;
   }
 
-  const pass = prompt("Enter password to set total profit");
-  if (pass === null) return;
-  if (!pass.trim()) {
-    alert("Password required");
-    return;
-  }
-
   try {
     const payload = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        password: pass.trim(),
         desiredTotalProfit
       })
     };
@@ -3307,8 +3415,20 @@ async function setTotalProfitManually() {
 }
 
 async function loadLifetimeCustomersReport() {
+  if (!adminLoggedIn) {
+    const ok = await ensureAdminSession(false);
+    if (!ok) {
+      getById("lifetimeCustomersReport").innerHTML = "<div>Admin login required to load lifetime spending</div>";
+      return;
+    }
+  }
   try {
     const res = await apiFetch(`/customers-lifetime?nocache=${Date.now()}`);
+    if (res.status === 401) {
+      handleAdminSessionExpired("Admin session expired. Lifetime spending reload ke liye dobara login karo.");
+      getById("lifetimeCustomersReport").innerHTML = "<div>Admin session expired. Login again.</div>";
+      return;
+    }
     if (!res.ok) throw new Error("lifetime customers fetch failed");
     const data = await res.json();
     const allCustomers = Array.isArray(data.customers) ? data.customers : [];
@@ -3358,6 +3478,8 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("click", armSoundOnce, { once: true });
 document.addEventListener("touchstart", armSoundOnce, { once: true });
 initPushNotifications();
+setAdminSurfaceVisible(false);
+restoreAdminSessionSilently();
 showCart();
 renderDeliveryNote();
 updateStoreStatus();
@@ -3365,15 +3487,13 @@ setInterval(updateStoreStatus, 5000);
 loadStockFromServer();
 setInterval(loadStockFromServer, 15000);
 loadSellPriceFromServer();
-loadOrders();
-setInterval(loadOrders, 5000);
-refreshTodayReport(false);
-setInterval(() => refreshTodayReport(false), 15000);
-loadTopCustomers();
-setInterval(loadTopCustomers, 15000);
 setInterval(() => {
-  if (getById("adminPanel").style.display === "block") {
+  if (adminLoggedIn && getById("adminPanel").style.display === "block") {
+    loadOrders();
+    refreshTodayReport(false);
+    loadTopCustomers();
     loadAdminCustomersReport();
+    loadLifetimeCustomersReport();
   }
 }, 15000);
 showCancelOrderUI();

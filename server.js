@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
 const webpush = require("web-push");
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.static(__dirname));
 
@@ -336,6 +337,18 @@ app.use(async (req, res, next) => {
 const RESET_CUSTOMER_PASSWORD = process.env.RESET_CUSTOMER_PASSWORD || "291";
 const PRICE_UPDATE_PASSWORD = process.env.PRICE_UPDATE_PASSWORD || "291";
 const RESET_PROFIT_PASSWORD = process.env.RESET_PROFIT_PASSWORD || "291";
+const DEFAULT_DEV_ADMIN_PASSWORD = String(process.env.NODE_ENV || "").toLowerCase() === "production" ? "" : "291";
+const ADMIN_PASSWORD_CANDIDATES = [
+  process.env.ADMIN_PASSWORD,
+  process.env.RESET_CUSTOMER_PASSWORD,
+  process.env.PRICE_UPDATE_PASSWORD,
+  process.env.RESET_PROFIT_PASSWORD,
+  DEFAULT_DEV_ADMIN_PASSWORD,
+].map((value) => String(value || "").trim()).filter(Boolean);
+const ADMIN_SESSION_COOKIE = "monty_admin_session";
+const ADMIN_SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const ADMIN_COOKIE_SECURE = String(process.env.NODE_ENV || "").toLowerCase() === "production";
+const adminSessions = new Map();
 const WEB_PUSH_PUBLIC_KEY = String(
   process.env.WEB_PUSH_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || ""
 ).trim();
@@ -353,6 +366,159 @@ if (WEB_PUSH_PUBLIC_KEY && WEB_PUSH_PRIVATE_KEY) {
 } else {
   console.warn("Web push disabled: WEB_PUSH_PUBLIC_KEY / WEB_PUSH_PRIVATE_KEY missing.");
 }
+if (!ADMIN_PASSWORD_CANDIDATES.length) {
+  console.warn("Admin login disabled: set ADMIN_PASSWORD on the server environment.");
+}
+
+function parseCookieHeader(cookieHeader) {
+  const out = {};
+  String(cookieHeader || "")
+    .split(";")
+    .forEach((entry) => {
+      const idx = entry.indexOf("=");
+      if (idx <= 0) return;
+      const key = entry.slice(0, idx).trim();
+      const value = entry.slice(idx + 1).trim();
+      if (!key) return;
+      out[key] = decodeURIComponent(value);
+    });
+  return out;
+}
+
+function getAdminSessionToken(req) {
+  const cookies = parseCookieHeader(req.headers.cookie || "");
+  return String(cookies[ADMIN_SESSION_COOKIE] || "").trim();
+}
+
+function isValidAdminPassword(passwordRaw) {
+  const password = String(passwordRaw || "").trim();
+  return !!password && ADMIN_PASSWORD_CANDIDATES.includes(password);
+}
+
+function setAdminSessionCookie(res, token) {
+  res.cookie(ADMIN_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: ADMIN_COOKIE_SECURE,
+    maxAge: ADMIN_SESSION_TTL_MS,
+    path: "/",
+  });
+}
+
+function clearAdminSessionCookie(res) {
+  res.clearCookie(ADMIN_SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: ADMIN_COOKIE_SECURE,
+    path: "/",
+  });
+}
+
+function createAdminSession(res) {
+  const token = crypto.randomBytes(32).toString("hex");
+  adminSessions.set(token, { expiresAt: Date.now() + ADMIN_SESSION_TTL_MS });
+  setAdminSessionCookie(res, token);
+  return token;
+}
+
+function hasActiveAdminSession(req) {
+  const token = getAdminSessionToken(req);
+  if (!token) return false;
+  const session = adminSessions.get(token);
+  if (!session) return false;
+  if (!Number.isFinite(session.expiresAt) || session.expiresAt <= Date.now()) {
+    adminSessions.delete(token);
+    return false;
+  }
+  session.expiresAt = Date.now() + ADMIN_SESSION_TTL_MS;
+  return true;
+}
+
+function destroyAdminSession(req, res) {
+  const token = getAdminSessionToken(req);
+  if (token) {
+    adminSessions.delete(token);
+  }
+  clearAdminSessionCookie(res);
+}
+
+function requireAdminSession(req, res, next) {
+  if (hasActiveAdminSession(req)) return next();
+  destroyAdminSession(req, res);
+  return res.status(401).json({ status: "unauthorized", message: "Admin login required" });
+}
+
+const ADMIN_PROTECTED_PATHS = new Set([
+  "/admin/offline-sale",
+  "/offline-sale",
+  "/buy-price",
+  "/sell-price",
+  "/today-report",
+  "/admin/order-status",
+  "/admin/adjust-order",
+  "/accept-order",
+  "/top-customers",
+  "/customers-report",
+  "/customers-lifetime",
+  "/admin/customer-spend",
+  "/admin/customer-spend/delete",
+  "/admin/reset-customer-money",
+  "/reset-customer-money",
+  "/admin/reset-profit",
+  "/reset-profit",
+  "/admin/set-month-profit",
+  "/set-month-profit",
+  "/admin/set-month-delivery-profit",
+  "/set-month-delivery-profit",
+  "/admin/set-total-profit",
+  "/set-total-profit",
+  "/orders",
+  "/distributor-stock",
+  "/distributor-month-summary",
+]);
+
+const ADMIN_PROTECTED_MUTATION_PATHS = new Set([
+  "/stock",
+  "/store-status",
+  "/auto-close-status",
+  "/closing-alert-status",
+  "/sleeping-alert-status",
+  "/out-of-hostel-alert-status",
+  "/exam-delivery-alert-status",
+  "/delivery-status",
+]);
+
+app.get("/admin/session", (req, res) => {
+  if (!hasActiveAdminSession(req)) {
+    destroyAdminSession(req, res);
+    return res.status(401).json({ status: "unauthorized" });
+  }
+  return res.json({ status: "ok" });
+});
+
+app.post("/admin/session", (req, res) => {
+  if (!isValidAdminPassword(req.body?.password)) {
+    destroyAdminSession(req, res);
+    return res.status(403).json({ status: "error", message: "Invalid password" });
+  }
+  createAdminSession(res);
+  return res.json({ status: "ok" });
+});
+
+app.post("/admin/logout", (req, res) => {
+  destroyAdminSession(req, res);
+  return res.json({ status: "logged_out" });
+});
+
+app.use((req, res, next) => {
+  if (ADMIN_PROTECTED_PATHS.has(req.path)) {
+    return requireAdminSession(req, res, next);
+  }
+  if (req.method !== "GET" && ADMIN_PROTECTED_MUTATION_PATHS.has(req.path)) {
+    return requireAdminSession(req, res, next);
+  }
+  return next();
+});
 
 function normalizeMonthProfitAdjustments(raw) {
   const out = {};
@@ -685,6 +851,10 @@ app.get("/stock", (req, res) => {
   res.json(storeStock);
 });
 
+app.get("/storefront-prices", (req, res) => {
+  res.json(sellPrice);
+});
+
 app.get("/push/public-key", (req, res) => {
   if (!webPushEnabled) {
     return res.status(503).json({ status: "disabled", message: "Push notifications are not configured." });
@@ -751,11 +921,6 @@ app.post("/stock", (req, res) => {
 });
 
 function handleOfflineSale(req, res) {
-  const password = String(req.body?.password || "");
-  if (password !== RESET_PROFIT_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
-
   const itemName = String(req.body?.itemName || "").trim();
   const qty = Number(req.body?.qty);
   if (!itemName || !Number.isFinite(qty) || qty <= 0) {
@@ -889,10 +1054,6 @@ app.get("/buy-price", (req, res) => {
 });
 
 app.post("/buy-price", (req, res) => {
-  const password = String(req.body?.password || "");
-  if (password !== PRICE_UPDATE_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
   const nextBuy = normalizePricePayload(req.body);
   if (!nextBuy || typeof nextBuy !== "object") {
     return res.status(400).json({ status: "error", message: "Invalid buy price data" });
@@ -907,10 +1068,6 @@ app.get("/sell-price", (req, res) => {
 });
 
 app.post("/sell-price", (req, res) => {
-  const password = String(req.body?.password || "");
-  if (password !== PRICE_UPDATE_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
   const nextSell = normalizePricePayload(req.body);
   if (!nextSell || typeof nextSell !== "object") {
     return res.status(400).json({ status: "error", message: "Invalid sell price data" });
@@ -1193,11 +1350,20 @@ app.get("/top-customers", (req, res) => {
     : getMonthKey(new Date());
 
   const spendMap = {};
+  let countedOrders = 0;
+  let excludedOrders = 0;
+  let cancelledOrders = 0;
   orders.forEach((order) => {
-    if (isOrderCancelled(order)) return;
-    if (isOrderExcludedFromCustomerStats(order)) return;
     const dt = getOrderDate(order);
     if (!dt || getMonthKey(dt) !== month) return;
+    if (isOrderCancelled(order)) {
+      cancelledOrders += 1;
+      return;
+    }
+    if (isOrderExcludedFromCustomerStats(order)) {
+      excludedOrders += 1;
+      return;
+    }
     const key = buildCustomerKey(order.name, order.room);
     if (!spendMap[key]) {
       spendMap[key] = {
@@ -1209,6 +1375,7 @@ app.get("/top-customers", (req, res) => {
     }
     spendMap[key].totalSpent += Number(order.total) || 0;
     spendMap[key].ordersCount += 1;
+    countedOrders += 1;
   });
 
   applyMonthlyManualCustomers(spendMap, month);
@@ -1217,7 +1384,15 @@ app.get("/top-customers", (req, res) => {
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, 3);
 
-  res.json({ month, topCustomers: ranked });
+  res.json({
+    month,
+    topCustomers: ranked,
+    debug: {
+      countedOrders,
+      excludedOrders,
+      cancelledOrders,
+    },
+  });
 });
 
 app.get("/customers-report", (req, res) => {
@@ -1227,6 +1402,7 @@ app.get("/customers-report", (req, res) => {
 
   const allSpendMap = {};
   const activeSpendMap = {};
+  const excludedSpendMap = {};
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
     const dt = getOrderDate(order);
@@ -1243,7 +1419,19 @@ app.get("/customers-report", (req, res) => {
     allSpendMap[key].totalSpent += Number(order.total) || 0;
     allSpendMap[key].ordersCount += 1;
 
-    if (isOrderExcludedFromCustomerStats(order)) return;
+    if (isOrderExcludedFromCustomerStats(order)) {
+      if (!excludedSpendMap[key]) {
+        excludedSpendMap[key] = {
+          name: String(order.name || "").trim() || "Unknown",
+          room: String(order.room || "").trim() || "-",
+          totalSpent: 0,
+          ordersCount: 0,
+        };
+      }
+      excludedSpendMap[key].totalSpent += Number(order.total) || 0;
+      excludedSpendMap[key].ordersCount += 1;
+      return;
+    }
     if (!activeSpendMap[key]) {
       activeSpendMap[key] = {
         name: String(order.name || "").trim() || "Unknown",
@@ -1261,12 +1449,15 @@ app.get("/customers-report", (req, res) => {
 
   const allCustomers = Object.values(allSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
   const customers = Object.values(activeSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
+  const excludedCustomers = Object.values(excludedSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
   res.json({
     month,
     customers,
     allCustomers,
+    excludedCustomers,
     activeCustomersCount: customers.length,
     totalCustomers: allCustomers.length,
+    excludedCustomersCount: excludedCustomers.length,
   });
 });
 
@@ -1367,11 +1558,6 @@ app.post("/admin/customer-spend/delete", (req, res) => {
 });
 
 function handleResetCustomerMoney(req, res) {
-  const password = String(req.body?.password || "");
-  if (password !== RESET_CUSTOMER_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
-
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
     : getMonthKey(new Date());
@@ -1392,11 +1578,6 @@ function handleResetCustomerMoney(req, res) {
 }
 
 function handleResetProfit(req, res) {
-  const password = String(req.body?.password || "");
-  if (password !== RESET_PROFIT_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
-
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
     : getMonthKey(new Date());
@@ -1458,11 +1639,6 @@ function calculateRawMonthDeliveryProfit(month) {
 }
 
 function handleSetMonthProfit(req, res) {
-  const password = String(req.body?.password || "");
-  if (password !== RESET_PROFIT_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
-
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
     : getMonthKey(new Date());
@@ -1494,11 +1670,6 @@ app.post("/admin/set-month-profit", handleSetMonthProfit);
 app.post("/set-month-profit", handleSetMonthProfit);
 
 function handleSetTotalProfit(req, res) {
-  const password = String(req.body?.password || "");
-  if (password !== RESET_PROFIT_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
-
   const desiredTotalProfit = Number(req.body?.desiredTotalProfit);
   if (!Number.isFinite(desiredTotalProfit)) {
     return res.status(400).json({ status: "error", message: "Invalid desiredTotalProfit" });
@@ -1517,11 +1688,6 @@ function handleSetTotalProfit(req, res) {
 }
 
 function handleSetMonthDeliveryProfit(req, res) {
-  const password = String(req.body?.password || "");
-  if (password !== RESET_PROFIT_PASSWORD) {
-    return res.status(403).json({ status: "error", message: "Invalid password" });
-  }
-
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
     : getMonthKey(new Date());
