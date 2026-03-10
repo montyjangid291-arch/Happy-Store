@@ -457,7 +457,6 @@ const ADMIN_PROTECTED_PATHS = new Set([
   "/admin/order-status",
   "/admin/adjust-order",
   "/accept-order",
-  "/top-customers",
   "/customers-report",
   "/customers-lifetime",
   "/admin/customer-spend",
@@ -1350,20 +1349,11 @@ app.get("/top-customers", (req, res) => {
     : getMonthKey(new Date());
 
   const spendMap = {};
-  let countedOrders = 0;
-  let excludedOrders = 0;
-  let cancelledOrders = 0;
   orders.forEach((order) => {
     const dt = getOrderDate(order);
     if (!dt || getMonthKey(dt) !== month) return;
-    if (isOrderCancelled(order)) {
-      cancelledOrders += 1;
-      return;
-    }
-    if (isOrderExcludedFromCustomerStats(order)) {
-      excludedOrders += 1;
-      return;
-    }
+    if (isOrderCancelled(order)) return;
+    if (isOrderExcludedFromCustomerStats(order)) return;
     const key = buildCustomerKey(order.name, order.room);
     if (!spendMap[key]) {
       spendMap[key] = {
@@ -1375,7 +1365,6 @@ app.get("/top-customers", (req, res) => {
     }
     spendMap[key].totalSpent += Number(order.total) || 0;
     spendMap[key].ordersCount += 1;
-    countedOrders += 1;
   });
 
   applyMonthlyManualCustomers(spendMap, month);
@@ -1384,15 +1373,7 @@ app.get("/top-customers", (req, res) => {
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, 3);
 
-  res.json({
-    month,
-    topCustomers: ranked,
-    debug: {
-      countedOrders,
-      excludedOrders,
-      cancelledOrders,
-    },
-  });
+  res.json({ month, topCustomers: ranked });
 });
 
 app.get("/customers-report", (req, res) => {
