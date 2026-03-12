@@ -2922,8 +2922,7 @@ async function loadAdminCustomersReport() {
     const activeCustomers = Array.isArray(data.customers) ? data.customers : [];
     const allCustomers = Array.isArray(data.allCustomers) ? data.allCustomers : activeCustomers;
     const excludedCustomers = Array.isArray(data.excludedCustomers) ? data.excludedCustomers : [];
-    const source = activeCustomers.length ? activeCustomers : allCustomers;
-    const customers = source.slice(0, 100);
+    const customers = allCustomers.slice(0, 100);
     const totalCustomers = Number(data.totalCustomers);
     const activeCount = Number(data.activeCustomersCount);
     const excludedCount = Number(data.excludedCustomersCount);
@@ -2934,9 +2933,7 @@ async function loadAdminCustomersReport() {
     }
     let html = `<div><b>Month:</b> ${data.month}</div>`;
     html += `<div><b>Total Customers:</b> ${Number.isFinite(totalCustomers) ? totalCustomers : allCustomers.length} | <b>Active Customers:</b> ${Number.isFinite(activeCount) ? activeCount : activeCustomers.length} | <b>Excluded Customers:</b> ${Number.isFinite(excludedCount) ? excludedCount : excludedCustomers.length} | <b>Showing:</b> ${customers.length} (max 100)</div>`;
-    if (activeCustomers.length === 0 && allCustomers.length > 0) {
-      html += `<div style="font-size:12px;color:#666;margin-top:4px;">Note: Active customers 0 hai kyunki month stats reset/excluded ho chuki hain. List all customers ki dikh rahi hai.</div>`;
-    }
+    html += `<div style="font-size:12px;color:#666;margin-top:4px;">Month report ab is month ke sab non-cancelled orders se banta hai. Excluded customers niche separately dikhte rahenge.</div>`;
     html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;">
 <tr><th style="border:1px solid #ccc;padding:6px;">#</th><th style="border:1px solid #ccc;padding:6px;">Name</th><th style="border:1px solid #ccc;padding:6px;">Room</th><th style="border:1px solid #ccc;padding:6px;">Orders</th><th style="border:1px solid #ccc;padding:6px;">Spent</th></tr>`;
     customers.forEach((c, idx) => {

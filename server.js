@@ -1353,7 +1353,6 @@ app.get("/top-customers", (req, res) => {
     const dt = getOrderDate(order);
     if (!dt || getMonthKey(dt) !== month) return;
     if (isOrderCancelled(order)) return;
-    if (isOrderExcludedFromCustomerStats(order)) return;
     const key = buildCustomerKey(order.name, order.room);
     if (!spendMap[key]) {
       spendMap[key] = {
