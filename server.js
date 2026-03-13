@@ -711,6 +711,52 @@ function applyMonthlyManualCustomers(spendMap, month) {
   });
 }
 
+function buildMonthlyCustomerSpendMaps(month) {
+  const allSpendMap = {};
+  const activeSpendMap = {};
+  const excludedSpendMap = {};
+
+  orders.forEach((order) => {
+    if (isOrderCancelled(order)) return;
+    const dt = getOrderDate(order);
+    if (!dt || getMonthKey(dt) !== month) return;
+
+    const key = buildCustomerKey(order.name, order.room);
+    const baseRow = {
+      name: String(order.name || "").trim() || "Unknown",
+      room: String(order.room || "").trim() || "-",
+      totalSpent: 0,
+      ordersCount: 0,
+    };
+
+    if (!allSpendMap[key]) {
+      allSpendMap[key] = { ...baseRow };
+    }
+    allSpendMap[key].totalSpent += Number(order.total) || 0;
+    allSpendMap[key].ordersCount += 1;
+
+    if (isOrderExcludedFromCustomerStats(order)) {
+      if (!excludedSpendMap[key]) {
+        excludedSpendMap[key] = { ...baseRow };
+      }
+      excludedSpendMap[key].totalSpent += Number(order.total) || 0;
+      excludedSpendMap[key].ordersCount += 1;
+      return;
+    }
+
+    if (!activeSpendMap[key]) {
+      activeSpendMap[key] = { ...baseRow };
+    }
+    activeSpendMap[key].totalSpent += Number(order.total) || 0;
+    activeSpendMap[key].ordersCount += 1;
+  });
+
+  applyMonthlyManualCustomers(allSpendMap, month);
+  applyMonthlyManualCustomers(activeSpendMap, month);
+
+  return { allSpendMap, activeSpendMap, excludedSpendMap };
+}
+
 async function readStoreFlagsFromDb() {
   const doc = await StoreState.findOne({ singletonKey: "main" })
     .select({ storeClosed: 1, roomDeliveryBlocked: 1, autoCloseAt1230Enabled: 1, autoCloseLastRunDate: 1, closingSoonAlertEnabled: 1, sleepingCallAlertEnabled: 1, outOfHostelAlertEnabled: 1, examDeliveryOffAlertEnabled: 1 })
@@ -1347,28 +1393,8 @@ app.get("/top-customers", (req, res) => {
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
     : getMonthKey(new Date());
-
-  const spendMap = {};
-  orders.forEach((order) => {
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
-    if (isOrderCancelled(order)) return;
-    const key = buildCustomerKey(order.name, order.room);
-    if (!spendMap[key]) {
-      spendMap[key] = {
-        name: String(order.name || "").trim() || "Unknown",
-        room: String(order.room || "").trim() || "-",
-        totalSpent: 0,
-        ordersCount: 0,
-      };
-    }
-    spendMap[key].totalSpent += Number(order.total) || 0;
-    spendMap[key].ordersCount += 1;
-  });
-
-  applyMonthlyManualCustomers(spendMap, month);
-
-  const ranked = Object.values(spendMap)
+  const { allSpendMap } = buildMonthlyCustomerSpendMaps(month);
+  const ranked = Object.values(allSpendMap)
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, 3);
 
@@ -1379,53 +1405,7 @@ app.get("/customers-report", (req, res) => {
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
     : getMonthKey(new Date());
-
-  const allSpendMap = {};
-  const activeSpendMap = {};
-  const excludedSpendMap = {};
-  orders.forEach((order) => {
-    if (isOrderCancelled(order)) return;
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
-    const key = buildCustomerKey(order.name, order.room);
-    if (!allSpendMap[key]) {
-      allSpendMap[key] = {
-        name: String(order.name || "").trim() || "Unknown",
-        room: String(order.room || "").trim() || "-",
-        totalSpent: 0,
-        ordersCount: 0,
-      };
-    }
-    allSpendMap[key].totalSpent += Number(order.total) || 0;
-    allSpendMap[key].ordersCount += 1;
-
-    if (isOrderExcludedFromCustomerStats(order)) {
-      if (!excludedSpendMap[key]) {
-        excludedSpendMap[key] = {
-          name: String(order.name || "").trim() || "Unknown",
-          room: String(order.room || "").trim() || "-",
-          totalSpent: 0,
-          ordersCount: 0,
-        };
-      }
-      excludedSpendMap[key].totalSpent += Number(order.total) || 0;
-      excludedSpendMap[key].ordersCount += 1;
-      return;
-    }
-    if (!activeSpendMap[key]) {
-      activeSpendMap[key] = {
-        name: String(order.name || "").trim() || "Unknown",
-        room: String(order.room || "").trim() || "-",
-        totalSpent: 0,
-        ordersCount: 0,
-      };
-    }
-    activeSpendMap[key].totalSpent += Number(order.total) || 0;
-    activeSpendMap[key].ordersCount += 1;
-  });
-
-  applyMonthlyManualCustomers(allSpendMap, month);
-  applyMonthlyManualCustomers(activeSpendMap, month);
+  const { allSpendMap, activeSpendMap, excludedSpendMap } = buildMonthlyCustomerSpendMaps(month);
 
   const allCustomers = Object.values(allSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
   const customers = Object.values(activeSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
