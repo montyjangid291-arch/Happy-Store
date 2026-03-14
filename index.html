@@ -533,18 +533,18 @@ input:focus, select:focus {
     <button class="btn addCartBtn" onclick="addToCart(this, 60, 'qty10')">Add</button>
   </div>
 
-  <div class="card" data-name="Unibic Chocokiss">
-    <img src="unibic chocokiss.jfif" alt="Unibic Chocokiss">
-    <h3>Unibic Chocokiss</h3>
-    <div class="weight">250 gm</div>
-    <div class="price">Rs 120</div>
+  <div class="card" data-name="Chocokiss Cookies">
+    <img src="chocokiss cookie.jpg" alt="Chocokiss Cookies">
+    <h3>Chocokiss Cookies</h3>
+    <div class="weight">12.5 gm</div>
+    <div class="price">Rs 6</div>
     <div class="stock"></div>
     <div class="qtyControl">
       <button class="qtyBtn" onclick="adjustQty('qty12', -1)" type="button">-</button>
       <input class="qtyInput" type="number" id="qty12" value="1" min="1">
       <button class="qtyBtn" onclick="adjustQty('qty12', 1)" type="button">+</button>
     </div><br>
-    <button class="btn addCartBtn" onclick="addToCart(this, 120, 'qty12')">Add</button>
+    <button class="btn addCartBtn" onclick="addToCart(this, 6, 'qty12')">Add</button>
   </div>
 
   <div class="card" data-name="Bhujia">
@@ -633,7 +633,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Tomato Chips <input id="sTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Chocolate Chip Cookies <input id="sUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Cookies <input id="sUnibicKesarCashewBadamCookies" type="number"></div>
-        <div class="stockEditorRow">Unibic Chocokiss <input id="sUnibicChocokiss" type="number"></div>
+        <div class="stockEditorRow">Chocokiss Cookies <input id="sUnibicChocokiss" type="number"></div>
         <div style="margin-top:8px;font-size:12px;color:#245476;">
           <label><input id="autoAddOfflineProfit" type="checkbox" checked> Stock minus par offline profit auto add kare</label>
         </div>
@@ -653,7 +653,7 @@ input:focus, select:focus {
             <option value="Tomato Chips">Tomato Chips</option>
             <option value="Unibic Chocolate Chip Cookies">Unibic Chocolate Chip Cookies</option>
             <option value="Unibic Kesar Cashew Badam Cookies">Unibic Kesar Cashew Badam Cookies</option>
-            <option value="Unibic Chocokiss">Unibic Chocokiss</option>
+            <option value="Chocokiss Cookies">Chocokiss Cookies</option>
           </select>
           <input id="offlineSaleQty" type="number" min="1" step="1" placeholder="Qty sold offline" style="width:100%;margin-bottom:6px;">
           <input id="offlineSaleSellPrice" type="number" min="0" step="0.01" placeholder="Sell Rs (blank=default)" style="width:100%;margin-bottom:6px;">
@@ -726,7 +726,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Tomato Chips Buy Rs <input id="bTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Cookies Buy Rs <input id="bUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Buy Rs <input id="bUnibicKesarCashewBadamCookies" type="number"></div>
-        <div class="stockEditorRow">Unibic Chocokiss Buy Rs <input id="bUnibicChocokiss" type="number"></div>
+        <div class="stockEditorRow">Chocokiss Cookies Buy Rs <input id="bUnibicChocokiss" type="number"></div>
         <button onclick="saveBuyPrice()">Save Buy Price</button>
       </div>
       <div class="priceCol">
@@ -744,7 +744,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Tomato Chips Sell Rs <input id="spTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Cookies Sell Rs <input id="spUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Sell Rs <input id="spUnibicKesarCashewBadamCookies" type="number"></div>
-        <div class="stockEditorRow">Unibic Chocokiss Sell Rs <input id="spUnibicChocokiss" type="number"></div>
+        <div class="stockEditorRow">Chocokiss Cookies Sell Rs <input id="spUnibicChocokiss" type="number"></div>
         <button onclick="saveSellPrice()">Save Sell Price</button>
       </div>
     </div>
@@ -786,7 +786,7 @@ let realPrice = {
   "Tomato Chips": 30,
   "Unibic Chocolate Chip Cookies": 30,
   "Unibic Kesar Cashew Badam Cookies": 60,
-  "Unibic Chocokiss": 120
+  "Chocokiss Cookies": 6
 };
 
 const DEFAULT_WHATSAPP_PHONE = "9983729301";
@@ -809,7 +809,7 @@ const STOCK_INPUT_FIELD_MAP = {
   "Tomato Chips": "sTomatoChips",
   "Unibic Chocolate Chip Cookies": "sUnibicCookies",
   "Unibic Kesar Cashew Badam Cookies": "sUnibicKesarCashewBadamCookies",
-  "Unibic Chocokiss": "sUnibicChocokiss"
+  "Chocokiss Cookies": "sUnibicChocokiss"
 };
 const BUY_PRICE_INPUT_FIELD_MAP = {
   Maggi: "bMaggi",
@@ -825,7 +825,7 @@ const BUY_PRICE_INPUT_FIELD_MAP = {
   "Tomato Chips": "bTomatoChips",
   "Unibic Chocolate Chip Cookies": "bUnibicCookies",
   "Unibic Kesar Cashew Badam Cookies": "bUnibicKesarCashewBadamCookies",
-  "Unibic Chocokiss": "bUnibicChocokiss"
+  "Chocokiss Cookies": "bUnibicChocokiss"
 };
 let storeClosed = false;
 let roomDeliveryBlocked = false;
@@ -2399,7 +2399,7 @@ async function loadBuyPriceFromServer() {
     getById("bTomatoChips").value = Number(buy["Tomato Chips"] || 0);
     getById("bUnibicCookies").value = Number(buy["Unibic Chocolate Chip Cookies"] || 0);
     getById("bUnibicKesarCashewBadamCookies").value = Number(buy["Unibic Kesar Cashew Badam Cookies"] || 0);
-    getById("bUnibicChocokiss").value = Number(buy["Unibic Chocokiss"] || 0);
+    getById("bUnibicChocokiss").value = Number(buy["Chocokiss Cookies"] || buy["Unibic Chocokiss"] || 0);
     syncOfflineSaleDefaultPrices();
   } catch (err) {
     console.log("Could not load buy prices:", err);
@@ -2421,6 +2421,9 @@ async function loadSellPriceFromServer() {
     const res = await apiFetch(`/storefront-prices?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("sell price fetch failed");
     const sell = await res.json();
+    if (!Object.prototype.hasOwnProperty.call(sell, "Chocokiss Cookies") && Object.prototype.hasOwnProperty.call(sell, "Unibic Chocokiss")) {
+      sell["Chocokiss Cookies"] = sell["Unibic Chocokiss"];
+    }
     const pick = (key, fallback) => {
       const raw = sell && Object.prototype.hasOwnProperty.call(sell, key) ? sell[key] : fallback;
       const num = Number(raw);
@@ -2442,7 +2445,7 @@ async function loadSellPriceFromServer() {
       "Tomato Chips": pick("Tomato Chips", Number(realPrice["Tomato Chips"] || 30)),
       "Unibic Chocolate Chip Cookies": pick("Unibic Chocolate Chip Cookies", Number(realPrice["Unibic Chocolate Chip Cookies"] || 30)),
       "Unibic Kesar Cashew Badam Cookies": pick("Unibic Kesar Cashew Badam Cookies", Number(realPrice["Unibic Kesar Cashew Badam Cookies"] || 60)),
-      "Unibic Chocokiss": pick("Unibic Chocokiss", Number(realPrice["Unibic Chocokiss"] || 120))
+      "Chocokiss Cookies": pick("Chocokiss Cookies", Number(realPrice["Chocokiss Cookies"] || realPrice["Unibic Chocokiss"] || 6))
     };
 
     getById("spMaggi").value = Number(realPrice.Maggi || 0);
@@ -2458,7 +2461,7 @@ async function loadSellPriceFromServer() {
     getById("spTomatoChips").value = Number(realPrice["Tomato Chips"] || 0);
     getById("spUnibicCookies").value = Number(realPrice["Unibic Chocolate Chip Cookies"] || 0);
     getById("spUnibicKesarCashewBadamCookies").value = Number(realPrice["Unibic Kesar Cashew Badam Cookies"] || 0);
-    getById("spUnibicChocokiss").value = Number(realPrice["Unibic Chocokiss"] || 0);
+    getById("spUnibicChocokiss").value = Number(realPrice["Chocokiss Cookies"] || 0);
 
     renderSellPriceCards();
     syncOfflineSaleDefaultPrices();
@@ -2482,7 +2485,7 @@ async function saveBuyPrice() {
     "Tomato Chips": +getById("bTomatoChips").value,
     "Unibic Chocolate Chip Cookies": +getById("bUnibicCookies").value,
     "Unibic Kesar Cashew Badam Cookies": +getById("bUnibicKesarCashewBadamCookies").value,
-    "Unibic Chocokiss": +getById("bUnibicChocokiss").value
+    "Chocokiss Cookies": +getById("bUnibicChocokiss").value
   };
   try {
     const res = await apiFetch("/buy-price", {
@@ -2516,7 +2519,7 @@ async function saveSellPrice() {
     "Tomato Chips": +getById("spTomatoChips").value,
     "Unibic Chocolate Chip Cookies": +getById("spUnibicCookies").value,
     "Unibic Kesar Cashew Badam Cookies": +getById("spUnibicKesarCashewBadamCookies").value,
-    "Unibic Chocokiss": +getById("spUnibicChocokiss").value
+    "Chocokiss Cookies": +getById("spUnibicChocokiss").value
   };
   try {
     const res = await apiFetch("/sell-price", {
@@ -2708,6 +2711,9 @@ async function loadStockFromServer() {
     const res = await apiFetch(`/stock?nocache=${Date.now()}`);
     if (!res.ok) throw new Error("stock fetch failed");
     stockData = await res.json();
+    if (!Number.isFinite(Number(stockData["Chocokiss Cookies"])) && Number.isFinite(Number(stockData["Unibic Chocokiss"]))) {
+      stockData["Chocokiss Cookies"] = Number(stockData["Unibic Chocokiss"]);
+    }
     updateStockDisplay();
     syncStockEntryInputs();
   } catch (err) {

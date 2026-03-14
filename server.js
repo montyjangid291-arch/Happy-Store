@@ -23,7 +23,7 @@ const defaultStock = {
   "Tomato Chips": 5,
   "Unibic Chocolate Chip Cookies": 5,
   "Unibic Kesar Cashew Badam Cookies": 5,
-  "Unibic Chocokiss": 5,
+  "Chocokiss Cookies": 5,
 };
 
 const defaultBuyPrice = {
@@ -40,7 +40,7 @@ const defaultBuyPrice = {
   "Tomato Chips": 0,
   "Unibic Chocolate Chip Cookies": 0,
   "Unibic Kesar Cashew Badam Cookies": 0,
-  "Unibic Chocokiss": 0,
+  "Chocokiss Cookies": 0,
 };
 
 const defaultSellPrice = {
@@ -57,7 +57,7 @@ const defaultSellPrice = {
   "Tomato Chips": 30,
   "Unibic Chocolate Chip Cookies": 30,
   "Unibic Kesar Cashew Badam Cookies": 60,
-  "Unibic Chocokiss": 120,
+  "Chocokiss Cookies": 6,
 };
 
 const defaultManualCustomers = {
@@ -81,7 +81,7 @@ function getDefaultProductMap(fillValue) {
     "Tomato Chips": fillValue,
     "Unibic Chocolate Chip Cookies": fillValue,
     "Unibic Kesar Cashew Badam Cookies": fillValue,
-    "Unibic Chocokiss": fillValue,
+    "Chocokiss Cookies": fillValue,
   };
 }
 
@@ -89,6 +89,9 @@ function migrateLegacyProductMap(rawMap) {
   const next = rawMap && typeof rawMap === "object" ? { ...rawMap } : {};
   if (next["Tedhe Medhe"] === undefined && next.Kurkure !== undefined) {
     next["Tedhe Medhe"] = next.Kurkure;
+  }
+  if (next["Chocokiss Cookies"] === undefined && next["Unibic Chocokiss"] !== undefined) {
+    next["Chocokiss Cookies"] = next["Unibic Chocokiss"];
   }
   return next;
 }
