@@ -12,7 +12,6 @@ app.use(express.static(__dirname));
 const defaultStock = {
   Maggi: 24,
   "Tedhe Medhe": 9,
-  Kurkure: 5,
   "Dark Fantasy": 5,
   Borboun: 5,
   "Frist Crop Potato Chips": 0,
@@ -29,7 +28,6 @@ const defaultStock = {
 const defaultBuyPrice = {
   Maggi: 0,
   "Tedhe Medhe": 0,
-  Kurkure: 0,
   "Dark Fantasy": 0,
   Borboun: 0,
   "Frist Crop Potato Chips": 0,
@@ -46,7 +44,6 @@ const defaultBuyPrice = {
 const defaultSellPrice = {
   Maggi: 20,
   "Tedhe Medhe": 20,
-  Kurkure: 30,
   "Dark Fantasy": 200,
   Borboun: 25,
   "Frist Crop Potato Chips": 30,
@@ -70,7 +67,6 @@ function getDefaultProductMap(fillValue) {
   return {
     Maggi: fillValue,
     "Tedhe Medhe": fillValue,
-    Kurkure: fillValue,
     "Dark Fantasy": fillValue,
     Borboun: fillValue,
     "Frist Crop Potato Chips": fillValue,
@@ -138,8 +134,8 @@ function normalizeManualCustomers(raw) {
     Object.keys(monthBucket).forEach((key) => {
       const entry = monthBucket[key];
       if (!entry || typeof entry !== "object") return;
-      const name = String(entry.name || "").trim();
-      const room = String(entry.room || "").trim();
+      const name = normalizeCustomerName(entry.name);
+      const room = normalizeCustomerRoom(entry.room);
       if (!name || !room) return;
       result.monthly[month][buildCustomerKey(name, room)] = {
         name,
@@ -154,8 +150,8 @@ function normalizeManualCustomers(raw) {
   Object.keys(lifetime).forEach((key) => {
     const entry = lifetime[key];
     if (!entry || typeof entry !== "object") return;
-    const name = String(entry.name || "").trim();
-    const room = String(entry.room || "").trim();
+    const name = normalizeCustomerName(entry.name);
+    const room = normalizeCustomerRoom(entry.room);
     if (!name || !room) return;
     result.lifetime[buildCustomerKey(name, room)] = {
       name,
@@ -229,8 +225,6 @@ function mergeProductMap(baseMap, incomingMap, fallbackValue = 0) {
 
 function normalizeSellPriceMap(rawMap) {
   const out = mergeProductMap(defaultSellPrice, rawMap, 0);
-  // Keep Kurkure fixed at Rs 30 even if older DB data still has Rs 20.
-  out.Kurkure = 30;
   return out;
 }
 
@@ -689,12 +683,30 @@ function getOrderDate(order) {
 }
 
 function getMonthKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+  });
+  const parts = fmt.formatToParts(date);
+  const byType = {};
+  parts.forEach((p) => {
+    if (p.type !== "literal") byType[p.type] = p.value;
+  });
+  return `${byType.year}-${byType.month}`;
+}
+
+function normalizeCustomerName(nameRaw) {
+  return String(nameRaw || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeCustomerRoom(roomRaw) {
+  return String(roomRaw || "").trim();
 }
 
 function buildCustomerKey(nameRaw, roomRaw) {
-  const name = String(nameRaw || "").trim().toLowerCase();
-  const room = String(roomRaw || "").trim();
+  const name = normalizeCustomerName(nameRaw).toLowerCase();
+  const room = normalizeCustomerRoom(roomRaw);
   return `${name}|${room}`;
 }
 
@@ -711,8 +723,8 @@ function applyMonthlyManualCustomers(spendMap, month) {
     const row = monthlyBucket[key];
     if (!row) return;
     spendMap[key] = {
-      name: String(row.name || "").trim() || "Unknown",
-      room: String(row.room || "").trim() || "-",
+      name: normalizeCustomerName(row.name) || "Unknown",
+      room: normalizeCustomerRoom(row.room) || "-",
       totalSpent: Math.max(0, Number(row.totalSpent) || 0),
       ordersCount: Math.max(0, Number(row.ordersCount) || 0),
     };
@@ -731,8 +743,8 @@ function buildMonthlyCustomerSpendMaps(month) {
 
     const key = buildCustomerKey(order.name, order.room);
     const baseRow = {
-      name: String(order.name || "").trim() || "Unknown",
-      room: String(order.room || "").trim() || "-",
+      name: normalizeCustomerName(order.name) || "Unknown",
+      room: normalizeCustomerRoom(order.room) || "-",
       totalSpent: 0,
       ordersCount: 0,
     };
@@ -809,8 +821,8 @@ function applyLifetimeManualCustomers(spendMap) {
     const row = lifetimeBucket[key];
     if (!row) return;
     spendMap[key] = {
-      name: String(row.name || "").trim() || "Unknown",
-      room: String(row.room || "").trim() || "-",
+      name: normalizeCustomerName(row.name) || "Unknown",
+      room: normalizeCustomerRoom(row.room) || "-",
       totalSpent: Math.max(0, Number(row.totalSpent) || 0),
       ordersCount: Math.max(0, Number(row.ordersCount) || 0),
     };
@@ -1032,6 +1044,8 @@ app.post("/order", async (req, res) => {
     return res.status(400).json({ status: "delivery_blocked", message: "Room delivery is not possible at this time" });
   }
   order.mode = normalizedMode;
+  order.name = normalizeCustomerName(order.name);
+  order.room = normalizeCustomerRoom(order.room);
 
   let itemsSubTotal = 0;
   const distributorRoom = getDistributorRoomByCustomerRoom(order.room);
@@ -1436,8 +1450,8 @@ app.get("/customers-lifetime", (req, res) => {
     const key = buildCustomerKey(order.name, order.room);
     if (!spendMap[key]) {
       spendMap[key] = {
-        name: String(order.name || "").trim() || "Unknown",
-        room: String(order.room || "").trim() || "-",
+        name: normalizeCustomerName(order.name) || "Unknown",
+        room: normalizeCustomerRoom(order.room) || "-",
         totalSpent: 0,
         ordersCount: 0,
       };
@@ -1468,8 +1482,8 @@ app.get("/admin/customer-spend", (req, res) => {
 
 app.post("/admin/customer-spend", (req, res) => {
   const scope = String(req.body?.scope || "month").toLowerCase();
-  const name = String(req.body?.name || "").trim();
-  const room = String(req.body?.room || "").trim();
+  const name = normalizeCustomerName(req.body?.name);
+  const room = normalizeCustomerRoom(req.body?.room);
   const totalSpent = Math.max(0, Number(req.body?.totalSpent) || 0);
   const ordersCount = Math.max(0, Number(req.body?.ordersCount) || 0);
 
