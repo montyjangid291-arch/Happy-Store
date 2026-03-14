@@ -228,34 +228,38 @@ function normalizeSellPriceMap(rawMap) {
   return out;
 }
 
-function saveData() {
-  StoreState.findOneAndUpdate(
-    { singletonKey: "main" },
-    {
-      singletonKey: "main",
-      storeStock,
-      orders,
-      pushSubscriptions,
-      manualCustomers,
-      monthProfitAdjustments,
-      monthDeliveryProfitAdjustments,
-      totalProfitAdjustment,
-      buyPrice,
-      sellPrice,
-      distributorStock,
-      storeClosed,
-      roomDeliveryBlocked,
-      autoCloseAt1230Enabled,
-      autoCloseLastRunDate,
-      closingSoonAlertEnabled,
-      sleepingCallAlertEnabled,
-      outOfHostelAlertEnabled,
-      examDeliveryOffAlertEnabled,
-    },
-    { upsert: true, setDefaultsOnInsert: true, new: true }
-  ).catch((err) => {
+async function saveData() {
+  try {
+    await StoreState.findOneAndUpdate(
+      { singletonKey: "main" },
+      {
+        singletonKey: "main",
+        storeStock,
+        orders,
+        pushSubscriptions,
+        manualCustomers,
+        monthProfitAdjustments,
+        monthDeliveryProfitAdjustments,
+        totalProfitAdjustment,
+        buyPrice,
+        sellPrice,
+        distributorStock,
+        storeClosed,
+        roomDeliveryBlocked,
+        autoCloseAt1230Enabled,
+        autoCloseLastRunDate,
+        closingSoonAlertEnabled,
+        sleepingCallAlertEnabled,
+        outOfHostelAlertEnabled,
+        examDeliveryOffAlertEnabled,
+      },
+      { upsert: true, setDefaultsOnInsert: true, new: true }
+    );
+    return true;
+  } catch (err) {
     console.error("MongoDB save failed:", err);
-  });
+    return false;
+  }
 }
 
 async function loadStateFromMongo() {
@@ -1091,7 +1095,9 @@ app.post("/order", async (req, res) => {
       : `ROOM DELIVERY (₹${order.deliveryCharge})`;
 
   orders.push(order);
-  saveData();
+  if (!(await saveData())) {
+    return res.status(500).json({ status: "error", message: "Could not save order" });
+  }
 
   console.log("\n====== NEW ORDER ======");
   console.log("Order ID:", order.id);
@@ -1217,7 +1223,7 @@ app.get("/today-report", (req, res) => {
   });
 });
 
-app.post("/cancel-order", (req, res) => {
+app.post("/cancel-order", async (req, res) => {
   const orderId = Number(req.body?.orderId);
   const confirmOrderId = Number(req.body?.confirmOrderId);
   if (!orderId) {
@@ -1263,11 +1269,13 @@ app.post("/cancel-order", (req, res) => {
 
   order.status = "cancelled";
   order.cancelledAt = new Date().toISOString();
-  saveData();
+  if (!(await saveData())) {
+    return res.status(500).json({ status: "error", message: "Could not cancel order" });
+  }
   res.json({ status: "cancelled", orderId });
 });
 
-app.post("/admin/order-status", (req, res) => {
+app.post("/admin/order-status", async (req, res) => {
   const orderId = Number(req.body?.orderId);
   const action = String(req.body?.action || "").toLowerCase();
 
@@ -1285,7 +1293,9 @@ app.post("/admin/order-status", (req, res) => {
       return res.status(400).json({ status: "error", message: "Cancelled order cannot be accepted" });
     }
     order.status = "accepted";
-    saveData();
+    if (!(await saveData())) {
+      return res.status(500).json({ status: "error", message: "Could not update order" });
+    }
     return res.json({ status: "accepted", orderId });
   }
 
@@ -1312,11 +1322,13 @@ app.post("/admin/order-status", (req, res) => {
 
   order.status = "cancelled";
   order.cancelledAt = new Date().toISOString();
-  saveData();
+  if (!(await saveData())) {
+    return res.status(500).json({ status: "error", message: "Could not cancel order" });
+  }
   return res.json({ status: "cancelled", orderId });
 });
 
-app.post("/admin/adjust-order", (req, res) => {
+app.post("/admin/adjust-order", async (req, res) => {
   const orderId = Number(req.body?.orderId);
   const adjustedItems = req.body?.items;
 
@@ -1385,7 +1397,9 @@ app.post("/admin/adjust-order", (req, res) => {
   }
 
   order.adjustedAt = new Date().toISOString();
-  saveData();
+  if (!(await saveData())) {
+    return res.status(500).json({ status: "error", message: "Could not adjust order" });
+  }
   return res.json({
     status: order.status,
     orderId,
@@ -1394,7 +1408,7 @@ app.post("/admin/adjust-order", (req, res) => {
   });
 });
 
-app.post("/accept-order", (req, res) => {
+app.post("/accept-order", async (req, res) => {
   const orderId = Number(req.body?.orderId);
   if (!orderId) {
     return res.status(400).json({ status: "error", message: "Invalid orderId" });
@@ -1407,7 +1421,9 @@ app.post("/accept-order", (req, res) => {
     return res.status(400).json({ status: "error", message: "Cancelled order cannot be accepted" });
   }
   order.status = "accepted";
-  saveData();
+  if (!(await saveData())) {
+    return res.status(500).json({ status: "error", message: "Could not accept order" });
+  }
   return res.json({ status: "accepted", orderId });
 });
 
@@ -1480,7 +1496,7 @@ app.get("/admin/customer-spend", (req, res) => {
   return res.json({ scope: "month", month, customers: rows });
 });
 
-app.post("/admin/customer-spend", (req, res) => {
+app.post("/admin/customer-spend", async (req, res) => {
   const scope = String(req.body?.scope || "month").toLowerCase();
   const name = normalizeCustomerName(req.body?.name);
   const room = normalizeCustomerRoom(req.body?.room);
@@ -1496,7 +1512,9 @@ app.post("/admin/customer-spend", (req, res) => {
 
   if (scope === "lifetime") {
     manualCustomers.lifetime[key] = payload;
-    saveData();
+    if (!(await saveData())) {
+      return res.status(500).json({ status: "error", message: "Could not save customer spend" });
+    }
     return res.json({ status: "saved", scope: "lifetime", customer: payload });
   }
 
@@ -1505,11 +1523,13 @@ app.post("/admin/customer-spend", (req, res) => {
     : getMonthKey(new Date());
   if (!manualCustomers.monthly[month]) manualCustomers.monthly[month] = {};
   manualCustomers.monthly[month][key] = payload;
-  saveData();
+  if (!(await saveData())) {
+    return res.status(500).json({ status: "error", message: "Could not save customer spend" });
+  }
   return res.json({ status: "saved", scope: "month", month, customer: payload });
 });
 
-app.post("/admin/customer-spend/delete", (req, res) => {
+app.post("/admin/customer-spend/delete", async (req, res) => {
   const scope = String(req.body?.scope || "month").toLowerCase();
   const name = String(req.body?.name || "").trim();
   const room = String(req.body?.room || "").trim();
@@ -1521,7 +1541,9 @@ app.post("/admin/customer-spend/delete", (req, res) => {
   if (scope === "lifetime") {
     if (manualCustomers.lifetime && manualCustomers.lifetime[key]) {
       delete manualCustomers.lifetime[key];
-      saveData();
+      if (!(await saveData())) {
+        return res.status(500).json({ status: "error", message: "Could not delete customer spend" });
+      }
     }
     return res.json({ status: "deleted", scope: "lifetime" });
   }
@@ -1534,7 +1556,9 @@ app.post("/admin/customer-spend/delete", (req, res) => {
     if (Object.keys(manualCustomers.monthly[month]).length === 0) {
       delete manualCustomers.monthly[month];
     }
-    saveData();
+    if (!(await saveData())) {
+      return res.status(500).json({ status: "error", message: "Could not delete customer spend" });
+    }
   }
   return res.json({ status: "deleted", scope: "month", month });
 });
