@@ -714,20 +714,57 @@ function buildCustomerKey(nameRaw, roomRaw) {
   return `${name}|${room}`;
 }
 
-function mergeCustomerSpendRow(spendMap, key, row) {
-  if (!spendMap[key]) {
-    spendMap[key] = {
-      name: normalizeCustomerName(row.name) || "Unknown",
-      room: normalizeCustomerRoom(row.room) || "-",
-      totalSpent: 0,
-      ordersCount: 0,
-    };
-  }
+function setCustomerSpendRow(spendMap, key, row) {
+  spendMap[key] = {
+    name: normalizeCustomerName(row.name) || "Unknown",
+    room: normalizeCustomerRoom(row.room) || "-",
+    totalSpent: Math.max(0, Number(row.totalSpent) || 0),
+    ordersCount: Math.max(0, Number(row.ordersCount) || 0),
+  };
+}
 
-  spendMap[key].name = normalizeCustomerName(row.name) || spendMap[key].name || "Unknown";
-  spendMap[key].room = normalizeCustomerRoom(row.room) || spendMap[key].room || "-";
-  spendMap[key].totalSpent += Math.max(0, Number(row.totalSpent) || 0);
-  spendMap[key].ordersCount += Math.max(0, Number(row.ordersCount) || 0);
+function ensureManualCustomerLedger() {
+  if (!manualCustomers || typeof manualCustomers !== "object") {
+    manualCustomers = normalizeManualCustomers(defaultManualCustomers);
+  }
+  if (!manualCustomers.monthly || typeof manualCustomers.monthly !== "object") {
+    manualCustomers.monthly = {};
+  }
+  if (!manualCustomers.lifetime || typeof manualCustomers.lifetime !== "object") {
+    manualCustomers.lifetime = {};
+  }
+}
+
+function addOrderToCustomerLedger(order) {
+  if (!order || isOrderCancelled(order) || isOrderExcludedFromCustomerStats(order)) return;
+
+  ensureManualCustomerLedger();
+
+  const key = buildCustomerKey(order.name, order.room);
+  const name = normalizeCustomerName(order.name) || "Unknown";
+  const room = normalizeCustomerRoom(order.room) || "-";
+  const orderTotal = Math.max(0, Number(order.total) || 0);
+  const orderCount = 1;
+  const month = getMonthKey(getOrderDate(order) || new Date());
+
+  if (!manualCustomers.monthly[month]) {
+    manualCustomers.monthly[month] = {};
+  }
+  if (!manualCustomers.monthly[month][key]) {
+    manualCustomers.monthly[month][key] = { name, room, totalSpent: 0, ordersCount: 0 };
+  }
+  manualCustomers.monthly[month][key].name = name;
+  manualCustomers.monthly[month][key].room = room;
+  manualCustomers.monthly[month][key].totalSpent += orderTotal;
+  manualCustomers.monthly[month][key].ordersCount += orderCount;
+
+  if (!manualCustomers.lifetime[key]) {
+    manualCustomers.lifetime[key] = { name, room, totalSpent: 0, ordersCount: 0 };
+  }
+  manualCustomers.lifetime[key].name = name;
+  manualCustomers.lifetime[key].room = room;
+  manualCustomers.lifetime[key].totalSpent += orderTotal;
+  manualCustomers.lifetime[key].ordersCount += orderCount;
 }
 
 function sortCustomersBySpend(rows) {
@@ -757,7 +794,7 @@ function applyMonthlyManualCustomers(spendMap, month) {
   Object.keys(monthlyBucket).forEach((key) => {
     const row = monthlyBucket[key];
     if (!row) return;
-    mergeCustomerSpendRow(spendMap, key, {
+    setCustomerSpendRow(spendMap, key, {
       name: normalizeCustomerName(row.name) || "Unknown",
       room: normalizeCustomerRoom(row.room) || "-",
       totalSpent: Math.max(0, Number(row.totalSpent) || 0),
@@ -855,7 +892,7 @@ function applyLifetimeManualCustomers(spendMap) {
   Object.keys(lifetimeBucket).forEach((key) => {
     const row = lifetimeBucket[key];
     if (!row) return;
-    mergeCustomerSpendRow(spendMap, key, {
+    setCustomerSpendRow(spendMap, key, {
       name: normalizeCustomerName(row.name) || "Unknown",
       room: normalizeCustomerRoom(row.room) || "-",
       totalSpent: Math.max(0, Number(row.totalSpent) || 0),
@@ -1119,6 +1156,7 @@ app.post("/order", async (req, res) => {
   }
   order.collectFromRoom = String(order.collectFromRoom || distributorRoom);
   order.profit = calculateOrderProfit(order);
+  addOrderToCustomerLedger(order);
 
   const deliveryText =
     order.mode === "pickup"
