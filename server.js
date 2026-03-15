@@ -767,6 +767,56 @@ function addOrderToCustomerLedger(order) {
   manualCustomers.lifetime[key].ordersCount += orderCount;
 }
 
+function pruneCustomerLedgerEntry(bucket, key) {
+  if (!bucket || !bucket[key]) return;
+  const row = bucket[key];
+  const totalSpent = Math.max(0, Number(row.totalSpent) || 0);
+  const ordersCount = Math.max(0, Number(row.ordersCount) || 0);
+  row.totalSpent = totalSpent;
+  row.ordersCount = ordersCount;
+  if (totalSpent === 0 && ordersCount === 0) {
+    delete bucket[key];
+  }
+}
+
+function adjustCustomerLedgerForOrder(order, totalDelta, ordersDelta = 0) {
+  if (!order || isOrderExcludedFromCustomerStats(order)) return;
+
+  ensureManualCustomerLedger();
+
+  const key = buildCustomerKey(order.name, order.room);
+  const month = getMonthKey(getOrderDate(order) || new Date());
+  const totalChange = Number(totalDelta) || 0;
+  const ordersChange = Number(ordersDelta) || 0;
+
+  if (manualCustomers.monthly[month] && manualCustomers.monthly[month][key]) {
+    manualCustomers.monthly[month][key].totalSpent = Math.max(
+      0,
+      (Number(manualCustomers.monthly[month][key].totalSpent) || 0) + totalChange
+    );
+    manualCustomers.monthly[month][key].ordersCount = Math.max(
+      0,
+      (Number(manualCustomers.monthly[month][key].ordersCount) || 0) + ordersChange
+    );
+    pruneCustomerLedgerEntry(manualCustomers.monthly[month], key);
+    if (Object.keys(manualCustomers.monthly[month]).length === 0) {
+      delete manualCustomers.monthly[month];
+    }
+  }
+
+  if (manualCustomers.lifetime[key]) {
+    manualCustomers.lifetime[key].totalSpent = Math.max(
+      0,
+      (Number(manualCustomers.lifetime[key].totalSpent) || 0) + totalChange
+    );
+    manualCustomers.lifetime[key].ordersCount = Math.max(
+      0,
+      (Number(manualCustomers.lifetime[key].ordersCount) || 0) + ordersChange
+    );
+    pruneCustomerLedgerEntry(manualCustomers.lifetime, key);
+  }
+}
+
 function sortCustomersBySpend(rows) {
   return rows.sort((a, b) => {
     const spentDiff = (Number(b.totalSpent) || 0) - (Number(a.totalSpent) || 0);
@@ -1336,6 +1386,7 @@ app.post("/cancel-order", async (req, res) => {
     });
   }
 
+  adjustCustomerLedgerForOrder(order, -(Number(order.total) || 0), -1);
   order.status = "cancelled";
   order.cancelledAt = new Date().toISOString();
   if (!(await saveData())) {
@@ -1389,6 +1440,7 @@ app.post("/admin/order-status", async (req, res) => {
     });
   }
 
+  adjustCustomerLedgerForOrder(order, -(Number(order.total) || 0), -1);
   order.status = "cancelled";
   order.cancelledAt = new Date().toISOString();
   if (!(await saveData())) {
@@ -1423,6 +1475,7 @@ app.post("/admin/adjust-order", async (req, res) => {
 
   let changed = false;
   const nextItems = [];
+  const previousTotal = Number(order.total) || 0;
 
   order.items.forEach((item) => {
     const name = String(item.name || "").trim();
@@ -1463,6 +1516,12 @@ app.post("/admin/adjust-order", async (req, res) => {
   } else {
     order.status = "partially_adjusted";
     recalculateOrderTotals(order);
+  }
+
+  const totalDelta = (Number(order.total) || 0) - previousTotal;
+  const ordersDelta = order.status === "cancelled" ? -1 : 0;
+  if (totalDelta !== 0 || ordersDelta !== 0) {
+    adjustCustomerLedgerForOrder(order, totalDelta, ordersDelta);
   }
 
   order.adjustedAt = new Date().toISOString();
