@@ -714,6 +714,37 @@ function buildCustomerKey(nameRaw, roomRaw) {
   return `${name}|${room}`;
 }
 
+function mergeCustomerSpendRow(spendMap, key, row) {
+  if (!spendMap[key]) {
+    spendMap[key] = {
+      name: normalizeCustomerName(row.name) || "Unknown",
+      room: normalizeCustomerRoom(row.room) || "-",
+      totalSpent: 0,
+      ordersCount: 0,
+    };
+  }
+
+  spendMap[key].name = normalizeCustomerName(row.name) || spendMap[key].name || "Unknown";
+  spendMap[key].room = normalizeCustomerRoom(row.room) || spendMap[key].room || "-";
+  spendMap[key].totalSpent += Math.max(0, Number(row.totalSpent) || 0);
+  spendMap[key].ordersCount += Math.max(0, Number(row.ordersCount) || 0);
+}
+
+function sortCustomersBySpend(rows) {
+  return rows.sort((a, b) => {
+    const spentDiff = (Number(b.totalSpent) || 0) - (Number(a.totalSpent) || 0);
+    if (spentDiff !== 0) return spentDiff;
+
+    const ordersDiff = (Number(b.ordersCount) || 0) - (Number(a.ordersCount) || 0);
+    if (ordersDiff !== 0) return ordersDiff;
+
+    const nameDiff = String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" });
+    if (nameDiff !== 0) return nameDiff;
+
+    return String(a.room || "").localeCompare(String(b.room || ""), undefined, { numeric: true, sensitivity: "base" });
+  });
+}
+
 function applyMonthlyManualCustomers(spendMap, month) {
   const monthlyBucket =
     manualCustomers &&
@@ -726,12 +757,12 @@ function applyMonthlyManualCustomers(spendMap, month) {
   Object.keys(monthlyBucket).forEach((key) => {
     const row = monthlyBucket[key];
     if (!row) return;
-    spendMap[key] = {
+    mergeCustomerSpendRow(spendMap, key, {
       name: normalizeCustomerName(row.name) || "Unknown",
       room: normalizeCustomerRoom(row.room) || "-",
       totalSpent: Math.max(0, Number(row.totalSpent) || 0),
       ordersCount: Math.max(0, Number(row.ordersCount) || 0),
-    };
+    });
   });
 }
 
@@ -824,12 +855,12 @@ function applyLifetimeManualCustomers(spendMap) {
   Object.keys(lifetimeBucket).forEach((key) => {
     const row = lifetimeBucket[key];
     if (!row) return;
-    spendMap[key] = {
+    mergeCustomerSpendRow(spendMap, key, {
       name: normalizeCustomerName(row.name) || "Unknown",
       room: normalizeCustomerRoom(row.room) || "-",
       totalSpent: Math.max(0, Number(row.totalSpent) || 0),
       ordersCount: Math.max(0, Number(row.ordersCount) || 0),
-    };
+    });
   });
 }
 
@@ -1432,9 +1463,7 @@ app.get("/top-customers", (req, res) => {
     ? req.query.month
     : getMonthKey(new Date());
   const { allSpendMap } = buildMonthlyCustomerSpendMaps(month);
-  const ranked = Object.values(allSpendMap)
-    .sort((a, b) => b.totalSpent - a.totalSpent)
-    .slice(0, 3);
+  const ranked = sortCustomersBySpend(Object.values(allSpendMap)).slice(0, 3);
 
   res.json({ month, topCustomers: ranked });
 });
@@ -1445,9 +1474,9 @@ app.get("/customers-report", (req, res) => {
     : getMonthKey(new Date());
   const { allSpendMap, activeSpendMap, excludedSpendMap } = buildMonthlyCustomerSpendMaps(month);
 
-  const allCustomers = Object.values(allSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
-  const customers = Object.values(activeSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
-  const excludedCustomers = Object.values(excludedSpendMap).sort((a, b) => b.totalSpent - a.totalSpent);
+  const allCustomers = sortCustomersBySpend(Object.values(allSpendMap));
+  const customers = sortCustomersBySpend(Object.values(activeSpendMap));
+  const excludedCustomers = sortCustomersBySpend(Object.values(excludedSpendMap));
   res.json({
     month,
     customers,
@@ -1477,22 +1506,21 @@ app.get("/customers-lifetime", (req, res) => {
   });
 
   applyLifetimeManualCustomers(spendMap);
-  const customers = Object.values(spendMap).sort((a, b) => b.totalSpent - a.totalSpent);
+  const customers = sortCustomersBySpend(Object.values(spendMap));
   res.json({ totalCustomers: customers.length, customers });
 });
 
 app.get("/admin/customer-spend", (req, res) => {
   const scope = String(req.query.scope || "month").toLowerCase();
   if (scope === "lifetime") {
-    const rows = Object.values(manualCustomers.lifetime || {}).sort((a, b) => b.totalSpent - a.totalSpent);
+    const rows = sortCustomersBySpend(Object.values(manualCustomers.lifetime || {}));
     return res.json({ scope: "lifetime", customers: rows });
   }
 
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
     : getMonthKey(new Date());
-  const rows = Object.values((manualCustomers.monthly && manualCustomers.monthly[month]) || {})
-    .sort((a, b) => b.totalSpent - a.totalSpent);
+  const rows = sortCustomersBySpend(Object.values((manualCustomers.monthly && manualCustomers.monthly[month]) || {}));
   return res.json({ scope: "month", month, customers: rows });
 });
 
