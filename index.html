@@ -421,6 +421,20 @@ input:focus, select:focus {
     <button class="btn addCartBtn" onclick="addToCart(this, 200, 'qty16')">Add</button>
   </div>
 
+  <div class="card" data-name="Dark Fantasy Sandwich Creme">
+    <img src="sandwich creme.webp" alt="Dark Fantasy Sandwich Creme">
+    <h3>Dark Fantasy Sandwich Creme</h3>
+    <div class="weight">79 gm</div>
+    <div class="price">Rs 30</div>
+    <div class="stock"></div>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty20', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty20" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty20', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 30, 'qty20')">Add</button>
+  </div>
+
   <div class="card" data-name="Borboun">
     <img src="borboun.jfif" alt="Borboun">
     <h3>Borboun</h3>
@@ -609,6 +623,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Maggi <input id="sMaggi" type="number"></div>
         <div class="stockEditorRow">Tedhe Medhe <input id="sTedheMedhe" type="number"></div>
         <div class="stockEditorRow">Dark Fantasy <input id="sDarkFantasy" type="number"></div>
+        <div class="stockEditorRow">Dark Fantasy Sandwich Creme <input id="sDarkFantasySandwichCreme" type="number"></div>
         <div class="stockEditorRow">Borboun <input id="sBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips <input id="sFristCropPotatoChips" type="number"></div>
         <div class="stockEditorRow">Britannia Chocolush <input id="sBritanniaChocolush" type="number"></div>
@@ -628,6 +643,7 @@ input:focus, select:focus {
             <option value="Maggi">Maggi</option>
             <option value="Tedhe Medhe">Tedhe Medhe</option>
             <option value="Dark Fantasy">Dark Fantasy</option>
+            <option value="Dark Fantasy Sandwich Creme">Dark Fantasy Sandwich Creme</option>
             <option value="Borboun">Borboun</option>
             <option value="Frist Crop Potato Chips">Frist Crop Potato Chips</option>
             <option value="Britannia Chocolush">Britannia Chocolush</option>
@@ -700,6 +716,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Maggi Buy Rs <input id="bMaggi" type="number"></div>
         <div class="stockEditorRow">Tedhe Medhe Buy Rs <input id="bTedheMedhe" type="number"></div>
         <div class="stockEditorRow">Dark Fantasy Buy Rs <input id="bDarkFantasy" type="number"></div>
+        <div class="stockEditorRow">Dark Fantasy Sandwich Creme Buy Rs <input id="bDarkFantasySandwichCreme" type="number"></div>
         <div class="stockEditorRow">Borboun Buy Rs <input id="bBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips Buy Rs <input id="bFristCropPotatoChips" type="number"></div>
         <div class="stockEditorRow">Britannia Chocolush Buy Rs <input id="bBritanniaChocolush" type="number"></div>
@@ -717,6 +734,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Maggi Sell Rs <input id="spMaggi" type="number"></div>
         <div class="stockEditorRow">Tedhe Medhe Sell Rs <input id="spTedheMedhe" type="number"></div>
         <div class="stockEditorRow">Dark Fantasy Sell Rs <input id="spDarkFantasy" type="number"></div>
+        <div class="stockEditorRow">Dark Fantasy Sandwich Creme Sell Rs <input id="spDarkFantasySandwichCreme" type="number"></div>
         <div class="stockEditorRow">Borboun Sell Rs <input id="spBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips Sell Rs <input id="spFristCropPotatoChips" type="number"></div>
         <div class="stockEditorRow">Britannia Chocolush Sell Rs <input id="spBritanniaChocolush" type="number"></div>
@@ -758,6 +776,7 @@ let realPrice = {
   Maggi: 20,
   "Tedhe Medhe": 20,
   "Dark Fantasy": 200,
+  "Dark Fantasy Sandwich Creme": 30,
   Borboun: 25,
   "Frist Crop Potato Chips": 30,
   "Britannia Chocolush": 150,
@@ -780,6 +799,7 @@ const STOCK_INPUT_FIELD_MAP = {
   Maggi: "sMaggi",
   "Tedhe Medhe": "sTedheMedhe",
   "Dark Fantasy": "sDarkFantasy",
+  "Dark Fantasy Sandwich Creme": "sDarkFantasySandwichCreme",
   Borboun: "sBorboun",
   "Frist Crop Potato Chips": "sFristCropPotatoChips",
   "Britannia Chocolush": "sBritanniaChocolush",
@@ -795,6 +815,7 @@ const BUY_PRICE_INPUT_FIELD_MAP = {
   Maggi: "bMaggi",
   "Tedhe Medhe": "bTedheMedhe",
   "Dark Fantasy": "bDarkFantasy",
+  "Dark Fantasy Sandwich Creme": "bDarkFantasySandwichCreme",
   Borboun: "bBorboun",
   "Frist Crop Potato Chips": "bFristCropPotatoChips",
   "Britannia Chocolush": "bBritanniaChocolush",
@@ -2362,6 +2383,7 @@ async function loadBuyPriceFromServer() {
     getById("bMaggi").value = Number(buy.Maggi || 0);
     getById("bTedheMedhe").value = Number(buy["Tedhe Medhe"] || buy.Kurkure || 0);
     getById("bDarkFantasy").value = Number(buy["Dark Fantasy"] || 0);
+    getById("bDarkFantasySandwichCreme").value = Number(buy["Dark Fantasy Sandwich Creme"] || 0);
     getById("bBorboun").value = Number(buy.Borboun || 0);
     getById("bFristCropPotatoChips").value = Number(buy["Frist Crop Potato Chips"] || 0);
     getById("bBritanniaChocolush").value = Number(buy["Britannia Chocolush"] || 0);
@@ -2404,6 +2426,7 @@ async function loadSellPriceFromServer() {
       Maggi: pick("Maggi", Number(realPrice.Maggi || 20)),
       "Tedhe Medhe": pick("Tedhe Medhe", Number(realPrice["Tedhe Medhe"] || 20)),
       "Dark Fantasy": pick("Dark Fantasy", Number(realPrice["Dark Fantasy"] || 200)),
+      "Dark Fantasy Sandwich Creme": pick("Dark Fantasy Sandwich Creme", Number(realPrice["Dark Fantasy Sandwich Creme"] || 30)),
       Borboun: pick("Borboun", Number(realPrice.Borboun || 25)),
       "Frist Crop Potato Chips": pick("Frist Crop Potato Chips", Number(realPrice["Frist Crop Potato Chips"] || 30)),
       "Britannia Chocolush": pick("Britannia Chocolush", Number(realPrice["Britannia Chocolush"] || 150)),
@@ -2419,6 +2442,7 @@ async function loadSellPriceFromServer() {
     getById("spMaggi").value = Number(realPrice.Maggi || 0);
     getById("spTedheMedhe").value = Number(realPrice["Tedhe Medhe"] || 0);
     getById("spDarkFantasy").value = Number(realPrice["Dark Fantasy"] || 0);
+    getById("spDarkFantasySandwichCreme").value = Number(realPrice["Dark Fantasy Sandwich Creme"] || 0);
     getById("spBorboun").value = Number(realPrice.Borboun || 0);
     getById("spFristCropPotatoChips").value = Number(realPrice["Frist Crop Potato Chips"] || 0);
     getById("spBritanniaChocolush").value = Number(realPrice["Britannia Chocolush"] || 0);
@@ -2442,6 +2466,7 @@ async function saveBuyPrice() {
     Maggi: +getById("bMaggi").value,
     "Tedhe Medhe": +getById("bTedheMedhe").value,
     "Dark Fantasy": +getById("bDarkFantasy").value,
+    "Dark Fantasy Sandwich Creme": +getById("bDarkFantasySandwichCreme").value,
     Borboun: +getById("bBorboun").value,
     "Frist Crop Potato Chips": +getById("bFristCropPotatoChips").value,
     "Britannia Chocolush": +getById("bBritanniaChocolush").value,
@@ -2475,6 +2500,7 @@ async function saveSellPrice() {
     Maggi: +getById("spMaggi").value,
     "Tedhe Medhe": +getById("spTedheMedhe").value,
     "Dark Fantasy": +getById("spDarkFantasy").value,
+    "Dark Fantasy Sandwich Creme": +getById("spDarkFantasySandwichCreme").value,
     Borboun: +getById("spBorboun").value,
     "Frist Crop Potato Chips": +getById("spFristCropPotatoChips").value,
     "Britannia Chocolush": +getById("spBritanniaChocolush").value,
