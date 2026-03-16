@@ -237,6 +237,24 @@ input:focus, select:focus {
 .floorTitle { font-weight: 800; margin-bottom: 6px; font-family: "Space Grotesk", sans-serif; }
 .floorMeta { font-size: 12px; color: #56685e; margin-bottom: 8px; }
 .floorOrdersList { max-height: 72vh; overflow-y: auto; padding-right: 4px; }
+.orderTypeBadge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.orderTypePickup {
+  background: #e7f7ed;
+  color: #117a43;
+  border: 1px solid #b8e2c5;
+}
+.orderTypeDelivery {
+  background: #e8f1ff;
+  color: #0d5bd1;
+  border: 1px solid #bfd3ff;
+}
 .stockEditorRow { margin-bottom: 6px; }
 .adminStockActionGrid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; align-items: start; }
 .adminStockCol, .adminActionCol { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fbfdff; }
@@ -2627,6 +2645,9 @@ async function loadOrders() {
       const itemsTotal = items.reduce((sum, i) => sum + ((Number(i.qty) || 0) * (Number(i.price) || 0)), 0);
       const deliveryCharge = Number(o.deliveryCharge) || 0;
       const grandTotal = Number(o.total) || (itemsTotal + deliveryCharge);
+      const isPickup = o.mode === "pickup";
+      const orderTypeLabel = isPickup ? "Self Pickup" : "Room Delivery";
+      const orderTypeClass = isPickup ? "orderTypeBadge orderTypePickup" : "orderTypeBadge orderTypeDelivery";
       const createdAtMs = o && o.createdAt ? new Date(o.createdAt).getTime() : NaN;
       const cancelLeftSec = Number.isFinite(createdAtMs)
         ? Math.ceil((CANCEL_WINDOW_MS - (Date.now() - createdAtMs)) / 1000)
@@ -2641,7 +2662,7 @@ async function loadOrders() {
 <b>${o.name}</b> (Room ${o.room})<br>
 ${isNewOrder ? `<div style="color:#d60000;font-weight:800;">NEW ORDER</div>` : ""}
 Order No: ${orderId || "-"}<br>
-Type: <b>${o.mode === "pickup" ? "Self Pickup" : "Room Delivery"}</b><br>
+Type: <span class="${orderTypeClass}">${orderTypeLabel}</span><br>
 Status: <b style="color:${statusColor};">${orderStatus}</b><br>
 Items:<br>
 ${itemRows || "No items"}<br>
