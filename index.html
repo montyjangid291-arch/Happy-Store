@@ -894,8 +894,18 @@ function readRecentCancelableOrders() {
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((o) => ({ id: Number(o && o.id), time: Number(o && o.time) }))
-      .filter((o) => Number.isFinite(o.id) && o.id > 0 && Number.isFinite(o.time) && o.time > 0);
+      .map((o) => ({
+        id: Number(o && o.id),
+        time: Number(o && o.time),
+        cancelToken: String(o && o.cancelToken || "").trim()
+      }))
+      .filter((o) => (
+        Number.isFinite(o.id) &&
+        o.id > 0 &&
+        Number.isFinite(o.time) &&
+        o.time > 0 &&
+        !!o.cancelToken
+      ));
   } catch (_e) {
     return [];
   }
@@ -918,9 +928,11 @@ function getActiveCancelableOrders() {
   return active;
 }
 
-function addRecentCancelableOrder(orderId, orderTime) {
+function addRecentCancelableOrder(orderId, orderTime, cancelToken) {
+  const safeCancelToken = String(cancelToken || "").trim();
+  if (!safeCancelToken) return;
   const list = getActiveCancelableOrders().filter((o) => o.id !== Number(orderId));
-  list.unshift({ id: Number(orderId), time: Number(orderTime) });
+  list.unshift({ id: Number(orderId), time: Number(orderTime), cancelToken: safeCancelToken });
   writeRecentCancelableOrders(list);
 }
 
@@ -2130,12 +2142,12 @@ async function placeOrder() {
     });
     if (!res.ok) throw new Error(`Order save failed: ${res.status}`);
     const data = await safeJson(res);
-    if (!data || data.status !== "ok" || !data.orderId) {
+    if (!data || data.status !== "ok" || !data.orderId || !data.cancelToken) {
       throw new Error("Order save response invalid");
     }
     localStorage.setItem(LAST_ORDER_ID_KEY, String(data.orderId));
     localStorage.setItem(LAST_ORDER_TIME_KEY, String(Date.now()));
-    addRecentCancelableOrder(data.orderId, Date.now());
+    addRecentCancelableOrder(data.orderId, Date.now(), data.cancelToken);
     showCancelOrderUI();
   } catch (err) {
     console.error(err);
@@ -2794,7 +2806,7 @@ async function cancelMyOrder(orderIdArg) {
     const res = await apiFetch("/cancel-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, confirmOrderId: orderId })
+      body: JSON.stringify({ orderId, confirmOrderId: orderId, cancelToken: found.cancelToken })
     });
     const data = await safeJson(res);
     if (!res.ok || data.status !== "cancelled") {

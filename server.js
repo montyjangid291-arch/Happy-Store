@@ -344,21 +344,14 @@ app.use(async (req, res, next) => {
     res.status(500).json({ status: "error", message: "Database unavailable" });
   }
 });
-const RESET_CUSTOMER_PASSWORD = process.env.RESET_CUSTOMER_PASSWORD || "291";
-const PRICE_UPDATE_PASSWORD = process.env.PRICE_UPDATE_PASSWORD || "291";
-const RESET_PROFIT_PASSWORD = process.env.RESET_PROFIT_PASSWORD || "291";
-const DEFAULT_DEV_ADMIN_PASSWORD = String(process.env.NODE_ENV || "").toLowerCase() === "production" ? "" : "291";
-const ADMIN_PASSWORD_CANDIDATES = [
-  process.env.ADMIN_PASSWORD,
-  process.env.RESET_CUSTOMER_PASSWORD,
-  process.env.PRICE_UPDATE_PASSWORD,
-  process.env.RESET_PROFIT_PASSWORD,
-  DEFAULT_DEV_ADMIN_PASSWORD,
-].map((value) => String(value || "").trim()).filter(Boolean);
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "").trim();
 const ADMIN_SESSION_COOKIE = "monty_admin_session";
 const ADMIN_SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const ADMIN_COOKIE_SECURE = String(process.env.NODE_ENV || "").toLowerCase() === "production";
 const adminSessions = new Map();
+const ADMIN_LOGIN_WINDOW_MS = 1000 * 60 * 15;
+const ADMIN_LOGIN_MAX_ATTEMPTS = 8;
+const adminLoginAttempts = new Map();
 const WEB_PUSH_PUBLIC_KEY = String(
   process.env.WEB_PUSH_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || ""
 ).trim();
@@ -376,7 +369,7 @@ if (WEB_PUSH_PUBLIC_KEY && WEB_PUSH_PRIVATE_KEY) {
 } else {
   console.warn("Web push disabled: WEB_PUSH_PUBLIC_KEY / WEB_PUSH_PRIVATE_KEY missing.");
 }
-if (!ADMIN_PASSWORD_CANDIDATES.length) {
+if (!ADMIN_PASSWORD) {
   console.warn("Admin login disabled: set ADMIN_PASSWORD on the server environment.");
 }
 
@@ -400,9 +393,59 @@ function getAdminSessionToken(req) {
   return String(cookies[ADMIN_SESSION_COOKIE] || "").trim();
 }
 
+function getClientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwarded || String(req.ip || req.socket?.remoteAddress || "unknown");
+}
+
+function pruneAdminLoginAttempts(now = Date.now()) {
+  adminLoginAttempts.forEach((entry, key) => {
+    if (!entry || !Number.isFinite(entry.firstAt) || (now - entry.firstAt) > ADMIN_LOGIN_WINDOW_MS) {
+      adminLoginAttempts.delete(key);
+    }
+  });
+}
+
+function getAdminLoginAttemptState(req) {
+  pruneAdminLoginAttempts();
+  const key = getClientIp(req);
+  const now = Date.now();
+  const current = adminLoginAttempts.get(key);
+  if (!current || !Number.isFinite(current.firstAt) || (now - current.firstAt) > ADMIN_LOGIN_WINDOW_MS) {
+    const fresh = { count: 0, firstAt: now };
+    adminLoginAttempts.set(key, fresh);
+    return fresh;
+  }
+  return current;
+}
+
+function registerAdminLoginFailure(req) {
+  const state = getAdminLoginAttemptState(req);
+  state.count += 1;
+  return state;
+}
+
+function clearAdminLoginAttempts(req) {
+  adminLoginAttempts.delete(getClientIp(req));
+}
+
+function isAdminLoginRateLimited(req) {
+  const state = getAdminLoginAttemptState(req);
+  if (state.count < ADMIN_LOGIN_MAX_ATTEMPTS) return false;
+  const retryAfterMs = Math.max(0, ADMIN_LOGIN_WINDOW_MS - (Date.now() - state.firstAt));
+  return {
+    retryAfterMs,
+    retryAfterSec: Math.max(1, Math.ceil(retryAfterMs / 1000)),
+  };
+}
+
 function isValidAdminPassword(passwordRaw) {
   const password = String(passwordRaw || "").trim();
-  return !!password && ADMIN_PASSWORD_CANDIDATES.includes(password);
+  if (!password || !ADMIN_PASSWORD) return false;
+  const expected = Buffer.from(ADMIN_PASSWORD, "utf8");
+  const provided = Buffer.from(password, "utf8");
+  if (expected.length !== provided.length) return false;
+  return crypto.timingSafeEqual(expected, provided);
 }
 
 function setAdminSessionCookie(res, token) {
@@ -506,10 +549,23 @@ app.get("/admin/session", (req, res) => {
 });
 
 app.post("/admin/session", (req, res) => {
+  if (!ADMIN_PASSWORD) {
+    destroyAdminSession(req, res);
+    return res.status(503).json({ status: "disabled", message: "Admin login is disabled on this server" });
+  }
+  const rateLimitState = isAdminLoginRateLimited(req);
+  if (rateLimitState) {
+    return res.status(429).json({
+      status: "rate_limited",
+      message: `Too many login attempts. Try again in ${rateLimitState.retryAfterSec}s`,
+    });
+  }
   if (!isValidAdminPassword(req.body?.password)) {
+    registerAdminLoginFailure(req);
     destroyAdminSession(req, res);
     return res.status(403).json({ status: "error", message: "Invalid password" });
   }
+  clearAdminLoginAttempts(req);
   createAdminSession(res);
   return res.json({ status: "ok" });
 });
@@ -1205,6 +1261,8 @@ app.post("/order", async (req, res) => {
   order.createdAt = new Date().toISOString();
   order.status = "active";
   order.cancelledAt = null;
+  const cancelToken = crypto.randomBytes(24).toString("hex");
+  order.cancelTokenHash = crypto.createHash("sha256").update(cancelToken).digest("hex");
   if (!order.deliveryType) {
     order.deliveryType = order.mode === "pickup" ? "Self Pickup" : "Room Delivery";
   }
@@ -1242,7 +1300,7 @@ app.post("/order", async (req, res) => {
     console.error("Push send failed:", err?.message || err);
   });
 
-  res.json({ status: "ok", orderId: order.id, cancelWindowMs: 120000 });
+  res.json({ status: "ok", orderId: order.id, cancelWindowMs: 120000, cancelToken });
 });
 
 app.get("/buy-price", (req, res) => {
@@ -1349,6 +1407,7 @@ app.get("/today-report", (req, res) => {
 app.post("/cancel-order", async (req, res) => {
   const orderId = Number(req.body?.orderId);
   const confirmOrderId = Number(req.body?.confirmOrderId);
+  const cancelToken = String(req.body?.cancelToken || "").trim();
   if (!orderId) {
     return res.status(400).json({ status: "error", message: "Invalid orderId" });
   }
@@ -1367,6 +1426,18 @@ app.post("/cancel-order", async (req, res) => {
   const createdAt = order.createdAt ? new Date(order.createdAt).getTime() : NaN;
   if (!Number.isFinite(createdAt)) {
     return res.status(400).json({ status: "error", message: "Order timestamp missing" });
+  }
+  if (!cancelToken) {
+    return res.status(400).json({ status: "error", message: "Cancel token required" });
+  }
+  const expectedTokenHash = String(order.cancelTokenHash || "").trim();
+  const providedTokenHash = crypto.createHash("sha256").update(cancelToken).digest("hex");
+  if (
+    !expectedTokenHash ||
+    expectedTokenHash.length !== providedTokenHash.length ||
+    !crypto.timingSafeEqual(Buffer.from(expectedTokenHash, "utf8"), Buffer.from(providedTokenHash, "utf8"))
+  ) {
+    return res.status(403).json({ status: "forbidden", message: "Invalid cancel token" });
   }
 
   const now = Date.now();
@@ -1393,6 +1464,7 @@ app.post("/cancel-order", async (req, res) => {
   adjustCustomerLedgerForOrder(order, -(Number(order.total) || 0), -1);
   order.status = "cancelled";
   order.cancelledAt = new Date().toISOString();
+  order.cancelTokenHash = null;
   if (!(await saveData())) {
     return res.status(500).json({ status: "error", message: "Could not cancel order" });
   }
