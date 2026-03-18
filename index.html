@@ -396,7 +396,7 @@ input:focus, select:focus {
   <div id="deliveryUnavailableNote" class="deliveryNote" style="color:#d9534f;"></div>
 </div>
 
-<div class="container">
+<div id="productContainer" class="container">
   <div class="card" data-name="Maggi">
     <img src="maggi.jpg" alt="Maggi">
     <h3>Maggi</h3>
@@ -887,6 +887,25 @@ let cancelUiTimer = null;
 let adminOrderMonitorTimer = null;
 let pushInitDone = false;
 let pushPublicKey = "";
+
+function sortProductCardsByAvailability() {
+  const container = getById("productContainer");
+  if (!container) return;
+  const cards = Array.from(container.querySelectorAll(".card"));
+  cards.forEach((card, index) => {
+    if (!card.dataset.originalOrder) {
+      card.dataset.originalOrder = String(index);
+    }
+  });
+  cards
+    .sort((a, b) => {
+      const aUnavailable = String(a.querySelector(".addCartBtn")?.dataset.out || "") === "true";
+      const bUnavailable = String(b.querySelector(".addCartBtn")?.dataset.out || "") === "true";
+      if (aUnavailable !== bUnavailable) return aUnavailable ? 1 : -1;
+      return (Number(a.dataset.originalOrder) || 0) - (Number(b.dataset.originalOrder) || 0);
+    })
+    .forEach((card) => container.appendChild(card));
+}
 
 function readRecentCancelableOrders() {
   try {
@@ -1638,6 +1657,8 @@ function updateStockDisplay() {
       btn.disabled = false;
     }
   });
+
+  sortProductCardsByAvailability();
 
   const lowBox = getById("lowStockBox");
   if (lowBox) {
