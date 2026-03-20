@@ -495,6 +495,20 @@ input:focus, select:focus {
     <button class="btn addCartBtn" onclick="addToCart(this, 150, 'qty19')">Add</button>
   </div>
 
+  <div class="card" data-name="BRITANNIA Pure Magic Chocolush">
+    <img src="pure magic.jpg" alt="BRITANNIA Pure Magic Chocolush">
+    <h3>BRITANNIA Pure Magic Chocolush</h3>
+    <div class="weight">12.5 gm</div>
+    <div class="price">Rs 7</div>
+    <div class="stock"></div>
+    <div class="qtyControl">
+      <button class="qtyBtn" onclick="adjustQty('qty20', -1)" type="button">-</button>
+      <input class="qtyInput" type="number" id="qty20" value="1" min="1">
+      <button class="qtyBtn" onclick="adjustQty('qty20', 1)" type="button">+</button>
+    </div><br>
+    <button class="btn addCartBtn" onclick="addToCart(this, 7, 'qty20')">Add</button>
+  </div>
+
   <div class="card" data-name="Onion Chips">
     <img src="onion-chips.jfif" alt="Onion Chips">
     <h3>Onion Chips</h3>
@@ -645,6 +659,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Borboun <input id="sBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips <input id="sFristCropPotatoChips" type="number"></div>
         <div class="stockEditorRow">Britannia Chocolush <input id="sBritanniaChocolush" type="number"></div>
+        <div class="stockEditorRow">BRITANNIA Pure Magic Chocolush <input id="sBritanniaPureMagicChocolush" type="number"></div>
         <div class="stockEditorRow">Namkeen <input id="sNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips <input id="sOnionChips" type="number"></div>
         <div class="stockEditorRow">Tomato Chips <input id="sTomatoChips" type="number"></div>
@@ -665,6 +680,7 @@ input:focus, select:focus {
             <option value="Borboun">Borboun</option>
             <option value="Frist Crop Potato Chips">Frist Crop Potato Chips</option>
             <option value="Britannia Chocolush">Britannia Chocolush</option>
+            <option value="BRITANNIA Pure Magic Chocolush">BRITANNIA Pure Magic Chocolush</option>
             <option value="Namkeen">Namkeen</option>
             <option value="Onion Chips">Onion Chips</option>
             <option value="Tomato Chips">Tomato Chips</option>
@@ -738,6 +754,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Borboun Buy Rs <input id="bBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips Buy Rs <input id="bFristCropPotatoChips" type="number"></div>
         <div class="stockEditorRow">Britannia Chocolush Buy Rs <input id="bBritanniaChocolush" type="number"></div>
+        <div class="stockEditorRow">BRITANNIA Pure Magic Chocolush Buy Rs <input id="bBritanniaPureMagicChocolush" type="number"></div>
         <div class="stockEditorRow">Namkeen Buy Rs <input id="bNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips Buy Rs <input id="bOnionChips" type="number"></div>
         <div class="stockEditorRow">Tomato Chips Buy Rs <input id="bTomatoChips" type="number"></div>
@@ -756,6 +773,7 @@ input:focus, select:focus {
         <div class="stockEditorRow">Borboun Sell Rs <input id="spBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips Sell Rs <input id="spFristCropPotatoChips" type="number"></div>
         <div class="stockEditorRow">Britannia Chocolush Sell Rs <input id="spBritanniaChocolush" type="number"></div>
+        <div class="stockEditorRow">BRITANNIA Pure Magic Chocolush Sell Rs <input id="spBritanniaPureMagicChocolush" type="number"></div>
         <div class="stockEditorRow">Namkeen Sell Rs <input id="spNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips Sell Rs <input id="spOnionChips" type="number"></div>
         <div class="stockEditorRow">Tomato Chips Sell Rs <input id="spTomatoChips" type="number"></div>
@@ -798,6 +816,7 @@ let realPrice = {
   Borboun: 25,
   "Frist Crop Potato Chips": 30,
   "Britannia Chocolush": 150,
+  "BRITANNIA Pure Magic Chocolush": 7,
   Namkeen: 50,
   "Onion Chips": 30,
   "Tomato Chips": 30,
@@ -821,6 +840,7 @@ const STOCK_INPUT_FIELD_MAP = {
   Borboun: "sBorboun",
   "Frist Crop Potato Chips": "sFristCropPotatoChips",
   "Britannia Chocolush": "sBritanniaChocolush",
+  "BRITANNIA Pure Magic Chocolush": "sBritanniaPureMagicChocolush",
   Namkeen: "sNamkeen",
   "Onion Chips": "sOnionChips",
   "Tomato Chips": "sTomatoChips",
@@ -837,6 +857,7 @@ const BUY_PRICE_INPUT_FIELD_MAP = {
   Borboun: "bBorboun",
   "Frist Crop Potato Chips": "bFristCropPotatoChips",
   "Britannia Chocolush": "bBritanniaChocolush",
+  "BRITANNIA Pure Magic Chocolush": "bBritanniaPureMagicChocolush",
   Namkeen: "bNamkeen",
   "Onion Chips": "bOnionChips",
   "Tomato Chips": "bTomatoChips",
@@ -2438,6 +2459,7 @@ async function loadBuyPriceFromServer() {
     getById("bBorboun").value = Number(buy.Borboun || 0);
     getById("bFristCropPotatoChips").value = Number(buy["Frist Crop Potato Chips"] || 0);
     getById("bBritanniaChocolush").value = Number(buy["Britannia Chocolush"] || 0);
+    getById("bBritanniaPureMagicChocolush").value = Number(buy["BRITANNIA Pure Magic Chocolush"] || 0);
     getById("bNamkeen").value = Number(buy.Namkeen || 0);
     getById("bOnionChips").value = Number(buy["Onion Chips"] || 0);
     getById("bTomatoChips").value = Number(buy["Tomato Chips"] || 0);
@@ -2481,6 +2503,7 @@ async function loadSellPriceFromServer() {
       Borboun: pick("Borboun", Number(realPrice.Borboun || 25)),
       "Frist Crop Potato Chips": pick("Frist Crop Potato Chips", Number(realPrice["Frist Crop Potato Chips"] || 30)),
       "Britannia Chocolush": pick("Britannia Chocolush", Number(realPrice["Britannia Chocolush"] || 150)),
+      "BRITANNIA Pure Magic Chocolush": pick("BRITANNIA Pure Magic Chocolush", Number(realPrice["BRITANNIA Pure Magic Chocolush"] || 7)),
       Namkeen: pick("Namkeen", Number(realPrice.Namkeen || 50)),
       "Onion Chips": pick("Onion Chips", Number(realPrice["Onion Chips"] || 30)),
       "Tomato Chips": pick("Tomato Chips", Number(realPrice["Tomato Chips"] || 30)),
@@ -2497,6 +2520,7 @@ async function loadSellPriceFromServer() {
     getById("spBorboun").value = Number(realPrice.Borboun || 0);
     getById("spFristCropPotatoChips").value = Number(realPrice["Frist Crop Potato Chips"] || 0);
     getById("spBritanniaChocolush").value = Number(realPrice["Britannia Chocolush"] || 0);
+    getById("spBritanniaPureMagicChocolush").value = Number(realPrice["BRITANNIA Pure Magic Chocolush"] || 0);
     getById("spNamkeen").value = Number(realPrice.Namkeen || 0);
     getById("spOnionChips").value = Number(realPrice["Onion Chips"] || 0);
     getById("spTomatoChips").value = Number(realPrice["Tomato Chips"] || 0);
@@ -2521,6 +2545,7 @@ async function saveBuyPrice() {
     Borboun: +getById("bBorboun").value,
     "Frist Crop Potato Chips": +getById("bFristCropPotatoChips").value,
     "Britannia Chocolush": +getById("bBritanniaChocolush").value,
+    "BRITANNIA Pure Magic Chocolush": +getById("bBritanniaPureMagicChocolush").value,
     Namkeen: +getById("bNamkeen").value,
     "Onion Chips": +getById("bOnionChips").value,
     "Tomato Chips": +getById("bTomatoChips").value,
@@ -2555,6 +2580,7 @@ async function saveSellPrice() {
     Borboun: +getById("spBorboun").value,
     "Frist Crop Potato Chips": +getById("spFristCropPotatoChips").value,
     "Britannia Chocolush": +getById("spBritanniaChocolush").value,
+    "BRITANNIA Pure Magic Chocolush": +getById("spBritanniaPureMagicChocolush").value,
     Namkeen: +getById("spNamkeen").value,
     "Onion Chips": +getById("spOnionChips").value,
     "Tomato Chips": +getById("spTomatoChips").value,
