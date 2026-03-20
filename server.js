@@ -16,14 +16,12 @@ const defaultStock = {
   "Dark Fantasy Sandwich Creme": 0,
   Borboun: 5,
   "Frist Crop Potato Chips": 0,
-  "Britannia Chocolush": 0,
   "BRITANNIA Pure Magic Chocolush": 0,
   Namkeen: 2,
   "Onion Chips": 5,
   "Tomato Chips": 5,
   "Unibic Chocolate Chip Cookies": 5,
   "Unibic Kesar Cashew Badam Cookies": 5,
-  "Unibic Chocokiss": 5,
   "Chocokiss Cookies": 5,
 };
 
@@ -34,14 +32,12 @@ const defaultBuyPrice = {
   "Dark Fantasy Sandwich Creme": 0,
   Borboun: 0,
   "Frist Crop Potato Chips": 0,
-  "Britannia Chocolush": 0,
   "BRITANNIA Pure Magic Chocolush": 0,
   Namkeen: 0,
   "Onion Chips": 0,
   "Tomato Chips": 0,
   "Unibic Chocolate Chip Cookies": 0,
   "Unibic Kesar Cashew Badam Cookies": 0,
-  "Unibic Chocokiss": 0,
   "Chocokiss Cookies": 0,
 };
 
@@ -52,14 +48,12 @@ const defaultSellPrice = {
   "Dark Fantasy Sandwich Creme": 30,
   Borboun: 25,
   "Frist Crop Potato Chips": 30,
-  "Britannia Chocolush": 150,
   "BRITANNIA Pure Magic Chocolush": 7,
   Namkeen: 50,
   "Onion Chips": 30,
   "Tomato Chips": 30,
   "Unibic Chocolate Chip Cookies": 30,
   "Unibic Kesar Cashew Badam Cookies": 60,
-  "Unibic Chocokiss": 120,
   "Chocokiss Cookies": 6,
 };
 
@@ -77,14 +71,12 @@ function getDefaultProductMap(fillValue) {
     "Dark Fantasy Sandwich Creme": fillValue,
     Borboun: fillValue,
     "Frist Crop Potato Chips": fillValue,
-    "Britannia Chocolush": fillValue,
     "BRITANNIA Pure Magic Chocolush": fillValue,
     Namkeen: fillValue,
     "Onion Chips": fillValue,
     "Tomato Chips": fillValue,
     "Unibic Chocolate Chip Cookies": fillValue,
     "Unibic Kesar Cashew Badam Cookies": fillValue,
-    "Unibic Chocokiss": fillValue,
     "Chocokiss Cookies": fillValue,
   };
 }

@@ -481,20 +481,6 @@ input:focus, select:focus {
     <button class="btn addCartBtn" onclick="addToCart(this, 30, 'qty18')">Add</button>
   </div>
 
-  <div class="card" data-name="Britannia Chocolush">
-    <img src="britannia.jfif" alt="Britannia Chocolush">
-    <h3>Britannia Chocolush</h3>
-    <div class="weight">300 gm</div>
-    <div class="price">Rs 150</div>
-    <div class="stock"></div>
-    <div class="qtyControl">
-      <button class="qtyBtn" onclick="adjustQty('qty19', -1)" type="button">-</button>
-      <input class="qtyInput" type="number" id="qty19" value="1" min="1">
-      <button class="qtyBtn" onclick="adjustQty('qty19', 1)" type="button">+</button>
-    </div><br>
-    <button class="btn addCartBtn" onclick="addToCart(this, 150, 'qty19')">Add</button>
-  </div>
-
   <div class="card" data-name="BRITANNIA Pure Magic Chocolush">
     <img src="pure magic.jpg" alt="BRITANNIA Pure Magic Chocolush">
     <h3>BRITANNIA Pure Magic Chocolush</h3>
@@ -563,20 +549,6 @@ input:focus, select:focus {
       <button class="qtyBtn" onclick="adjustQty('qty10', 1)" type="button">+</button>
     </div><br>
     <button class="btn addCartBtn" onclick="addToCart(this, 60, 'qty10')">Add</button>
-  </div>
-
-  <div class="card" data-name="Unibic Chocokiss">
-    <img src="unibic chocokiss.jfif" alt="Unibic Chocokiss">
-    <h3>Unibic Chocokiss</h3>
-    <div class="weight">250 gm</div>
-    <div class="price">Rs 120</div>
-    <div class="stock"></div>
-    <div class="qtyControl">
-      <button class="qtyBtn" onclick="adjustQty('qty12', -1)" type="button">-</button>
-      <input class="qtyInput" type="number" id="qty12" value="1" min="1">
-      <button class="qtyBtn" onclick="adjustQty('qty12', 1)" type="button">+</button>
-    </div><br>
-    <button class="btn addCartBtn" onclick="addToCart(this, 120, 'qty12')">Add</button>
   </div>
 
   <div class="card" data-name="Chocokiss Cookies">
@@ -658,14 +630,12 @@ input:focus, select:focus {
         <div class="stockEditorRow">Dark Fantasy Sandwich Creme <input id="sDarkFantasySandwichCreme" type="number"></div>
         <div class="stockEditorRow">Borboun <input id="sBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips <input id="sFristCropPotatoChips" type="number"></div>
-        <div class="stockEditorRow">Britannia Chocolush <input id="sBritanniaChocolush" type="number"></div>
         <div class="stockEditorRow">BRITANNIA Pure Magic Chocolush <input id="sBritanniaPureMagicChocolush" type="number"></div>
         <div class="stockEditorRow">Namkeen <input id="sNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips <input id="sOnionChips" type="number"></div>
         <div class="stockEditorRow">Tomato Chips <input id="sTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Chocolate Chip Cookies <input id="sUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Cookies <input id="sUnibicKesarCashewBadamCookies" type="number"></div>
-        <div class="stockEditorRow">Unibic Chocokiss <input id="sUnibicChocokiss" type="number"></div>
         <div class="stockEditorRow">Chocokiss Cookies <input id="sChocokissCookies" type="number"></div>
         <div style="margin-top:8px;font-size:12px;color:#245476;">
           <label><input id="autoAddOfflineProfit" type="checkbox" checked> Stock minus par offline profit auto add kare</label>
@@ -679,14 +649,12 @@ input:focus, select:focus {
             <option value="Dark Fantasy Sandwich Creme">Dark Fantasy Sandwich Creme</option>
             <option value="Borboun">Borboun</option>
             <option value="Frist Crop Potato Chips">Frist Crop Potato Chips</option>
-            <option value="Britannia Chocolush">Britannia Chocolush</option>
             <option value="BRITANNIA Pure Magic Chocolush">BRITANNIA Pure Magic Chocolush</option>
             <option value="Namkeen">Namkeen</option>
             <option value="Onion Chips">Onion Chips</option>
             <option value="Tomato Chips">Tomato Chips</option>
             <option value="Unibic Chocolate Chip Cookies">Unibic Chocolate Chip Cookies</option>
             <option value="Unibic Kesar Cashew Badam Cookies">Unibic Kesar Cashew Badam Cookies</option>
-            <option value="Unibic Chocokiss">Unibic Chocokiss</option>
             <option value="Chocokiss Cookies">Chocokiss Cookies</option>
           </select>
           <input id="offlineSaleQty" type="number" min="1" step="1" placeholder="Qty sold offline" style="width:100%;margin-bottom:6px;">
@@ -753,14 +721,12 @@ input:focus, select:focus {
         <div class="stockEditorRow">Dark Fantasy Sandwich Creme Buy Rs <input id="bDarkFantasySandwichCreme" type="number"></div>
         <div class="stockEditorRow">Borboun Buy Rs <input id="bBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips Buy Rs <input id="bFristCropPotatoChips" type="number"></div>
-        <div class="stockEditorRow">Britannia Chocolush Buy Rs <input id="bBritanniaChocolush" type="number"></div>
         <div class="stockEditorRow">BRITANNIA Pure Magic Chocolush Buy Rs <input id="bBritanniaPureMagicChocolush" type="number"></div>
         <div class="stockEditorRow">Namkeen Buy Rs <input id="bNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips Buy Rs <input id="bOnionChips" type="number"></div>
         <div class="stockEditorRow">Tomato Chips Buy Rs <input id="bTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Cookies Buy Rs <input id="bUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Buy Rs <input id="bUnibicKesarCashewBadamCookies" type="number"></div>
-        <div class="stockEditorRow">Unibic Chocokiss Buy Rs <input id="bUnibicChocokiss" type="number"></div>
         <div class="stockEditorRow">Chocokiss Cookies Buy Rs <input id="bChocokissCookies" type="number"></div>
         <button onclick="saveBuyPrice()">Save Buy Price</button>
       </div>
@@ -772,14 +738,12 @@ input:focus, select:focus {
         <div class="stockEditorRow">Dark Fantasy Sandwich Creme Sell Rs <input id="spDarkFantasySandwichCreme" type="number"></div>
         <div class="stockEditorRow">Borboun Sell Rs <input id="spBorboun" type="number"></div>
         <div class="stockEditorRow">Frist Crop Potato Chips Sell Rs <input id="spFristCropPotatoChips" type="number"></div>
-        <div class="stockEditorRow">Britannia Chocolush Sell Rs <input id="spBritanniaChocolush" type="number"></div>
         <div class="stockEditorRow">BRITANNIA Pure Magic Chocolush Sell Rs <input id="spBritanniaPureMagicChocolush" type="number"></div>
         <div class="stockEditorRow">Namkeen Sell Rs <input id="spNamkeen" type="number"></div>
         <div class="stockEditorRow">Onion Chips Sell Rs <input id="spOnionChips" type="number"></div>
         <div class="stockEditorRow">Tomato Chips Sell Rs <input id="spTomatoChips" type="number"></div>
         <div class="stockEditorRow">Unibic Cookies Sell Rs <input id="spUnibicCookies" type="number"></div>
         <div class="stockEditorRow">Unibic Kesar Cashew Badam Sell Rs <input id="spUnibicKesarCashewBadamCookies" type="number"></div>
-        <div class="stockEditorRow">Unibic Chocokiss Sell Rs <input id="spUnibicChocokiss" type="number"></div>
         <div class="stockEditorRow">Chocokiss Cookies Sell Rs <input id="spChocokissCookies" type="number"></div>
         <button onclick="saveSellPrice()">Save Sell Price</button>
       </div>
@@ -815,14 +779,12 @@ let realPrice = {
   "Dark Fantasy Sandwich Creme": 30,
   Borboun: 25,
   "Frist Crop Potato Chips": 30,
-  "Britannia Chocolush": 150,
   "BRITANNIA Pure Magic Chocolush": 7,
   Namkeen: 50,
   "Onion Chips": 30,
   "Tomato Chips": 30,
   "Unibic Chocolate Chip Cookies": 30,
   "Unibic Kesar Cashew Badam Cookies": 60,
-  "Unibic Chocokiss": 120,
   "Chocokiss Cookies": 6
 };
 
@@ -839,14 +801,12 @@ const STOCK_INPUT_FIELD_MAP = {
   "Dark Fantasy Sandwich Creme": "sDarkFantasySandwichCreme",
   Borboun: "sBorboun",
   "Frist Crop Potato Chips": "sFristCropPotatoChips",
-  "Britannia Chocolush": "sBritanniaChocolush",
   "BRITANNIA Pure Magic Chocolush": "sBritanniaPureMagicChocolush",
   Namkeen: "sNamkeen",
   "Onion Chips": "sOnionChips",
   "Tomato Chips": "sTomatoChips",
   "Unibic Chocolate Chip Cookies": "sUnibicCookies",
   "Unibic Kesar Cashew Badam Cookies": "sUnibicKesarCashewBadamCookies",
-  "Unibic Chocokiss": "sUnibicChocokiss",
   "Chocokiss Cookies": "sChocokissCookies"
 };
 const BUY_PRICE_INPUT_FIELD_MAP = {
@@ -856,14 +816,12 @@ const BUY_PRICE_INPUT_FIELD_MAP = {
   "Dark Fantasy Sandwich Creme": "bDarkFantasySandwichCreme",
   Borboun: "bBorboun",
   "Frist Crop Potato Chips": "bFristCropPotatoChips",
-  "Britannia Chocolush": "bBritanniaChocolush",
   "BRITANNIA Pure Magic Chocolush": "bBritanniaPureMagicChocolush",
   Namkeen: "bNamkeen",
   "Onion Chips": "bOnionChips",
   "Tomato Chips": "bTomatoChips",
   "Unibic Chocolate Chip Cookies": "bUnibicCookies",
   "Unibic Kesar Cashew Badam Cookies": "bUnibicKesarCashewBadamCookies",
-  "Unibic Chocokiss": "bUnibicChocokiss",
   "Chocokiss Cookies": "bChocokissCookies"
 };
 let storeClosed = false;
@@ -2458,14 +2416,12 @@ async function loadBuyPriceFromServer() {
     getById("bDarkFantasySandwichCreme").value = Number(buy["Dark Fantasy Sandwich Creme"] || 0);
     getById("bBorboun").value = Number(buy.Borboun || 0);
     getById("bFristCropPotatoChips").value = Number(buy["Frist Crop Potato Chips"] || 0);
-    getById("bBritanniaChocolush").value = Number(buy["Britannia Chocolush"] || 0);
     getById("bBritanniaPureMagicChocolush").value = Number(buy["BRITANNIA Pure Magic Chocolush"] || 0);
     getById("bNamkeen").value = Number(buy.Namkeen || 0);
     getById("bOnionChips").value = Number(buy["Onion Chips"] || 0);
     getById("bTomatoChips").value = Number(buy["Tomato Chips"] || 0);
     getById("bUnibicCookies").value = Number(buy["Unibic Chocolate Chip Cookies"] || 0);
     getById("bUnibicKesarCashewBadamCookies").value = Number(buy["Unibic Kesar Cashew Badam Cookies"] || 0);
-    getById("bUnibicChocokiss").value = Number(buy["Unibic Chocokiss"] || 0);
     getById("bChocokissCookies").value = Number(buy["Chocokiss Cookies"] || 0);
     syncOfflineSaleDefaultPrices();
   } catch (err) {
@@ -2502,14 +2458,12 @@ async function loadSellPriceFromServer() {
       "Dark Fantasy Sandwich Creme": pick("Dark Fantasy Sandwich Creme", Number(realPrice["Dark Fantasy Sandwich Creme"] || 30)),
       Borboun: pick("Borboun", Number(realPrice.Borboun || 25)),
       "Frist Crop Potato Chips": pick("Frist Crop Potato Chips", Number(realPrice["Frist Crop Potato Chips"] || 30)),
-      "Britannia Chocolush": pick("Britannia Chocolush", Number(realPrice["Britannia Chocolush"] || 150)),
       "BRITANNIA Pure Magic Chocolush": pick("BRITANNIA Pure Magic Chocolush", Number(realPrice["BRITANNIA Pure Magic Chocolush"] || 7)),
       Namkeen: pick("Namkeen", Number(realPrice.Namkeen || 50)),
       "Onion Chips": pick("Onion Chips", Number(realPrice["Onion Chips"] || 30)),
       "Tomato Chips": pick("Tomato Chips", Number(realPrice["Tomato Chips"] || 30)),
       "Unibic Chocolate Chip Cookies": pick("Unibic Chocolate Chip Cookies", Number(realPrice["Unibic Chocolate Chip Cookies"] || 30)),
       "Unibic Kesar Cashew Badam Cookies": pick("Unibic Kesar Cashew Badam Cookies", Number(realPrice["Unibic Kesar Cashew Badam Cookies"] || 60)),
-      "Unibic Chocokiss": pick("Unibic Chocokiss", Number(realPrice["Unibic Chocokiss"] || 120)),
       "Chocokiss Cookies": pick("Chocokiss Cookies", Number(realPrice["Chocokiss Cookies"] || 6))
     };
 
@@ -2519,14 +2473,12 @@ async function loadSellPriceFromServer() {
     getById("spDarkFantasySandwichCreme").value = Number(realPrice["Dark Fantasy Sandwich Creme"] || 0);
     getById("spBorboun").value = Number(realPrice.Borboun || 0);
     getById("spFristCropPotatoChips").value = Number(realPrice["Frist Crop Potato Chips"] || 0);
-    getById("spBritanniaChocolush").value = Number(realPrice["Britannia Chocolush"] || 0);
     getById("spBritanniaPureMagicChocolush").value = Number(realPrice["BRITANNIA Pure Magic Chocolush"] || 0);
     getById("spNamkeen").value = Number(realPrice.Namkeen || 0);
     getById("spOnionChips").value = Number(realPrice["Onion Chips"] || 0);
     getById("spTomatoChips").value = Number(realPrice["Tomato Chips"] || 0);
     getById("spUnibicCookies").value = Number(realPrice["Unibic Chocolate Chip Cookies"] || 0);
     getById("spUnibicKesarCashewBadamCookies").value = Number(realPrice["Unibic Kesar Cashew Badam Cookies"] || 0);
-    getById("spUnibicChocokiss").value = Number(realPrice["Unibic Chocokiss"] || 0);
     getById("spChocokissCookies").value = Number(realPrice["Chocokiss Cookies"] || 0);
 
     renderSellPriceCards();
@@ -2544,14 +2496,12 @@ async function saveBuyPrice() {
     "Dark Fantasy Sandwich Creme": +getById("bDarkFantasySandwichCreme").value,
     Borboun: +getById("bBorboun").value,
     "Frist Crop Potato Chips": +getById("bFristCropPotatoChips").value,
-    "Britannia Chocolush": +getById("bBritanniaChocolush").value,
     "BRITANNIA Pure Magic Chocolush": +getById("bBritanniaPureMagicChocolush").value,
     Namkeen: +getById("bNamkeen").value,
     "Onion Chips": +getById("bOnionChips").value,
     "Tomato Chips": +getById("bTomatoChips").value,
     "Unibic Chocolate Chip Cookies": +getById("bUnibicCookies").value,
     "Unibic Kesar Cashew Badam Cookies": +getById("bUnibicKesarCashewBadamCookies").value,
-    "Unibic Chocokiss": +getById("bUnibicChocokiss").value,
     "Chocokiss Cookies": +getById("bChocokissCookies").value
   };
   try {
@@ -2579,14 +2529,12 @@ async function saveSellPrice() {
     "Dark Fantasy Sandwich Creme": +getById("spDarkFantasySandwichCreme").value,
     Borboun: +getById("spBorboun").value,
     "Frist Crop Potato Chips": +getById("spFristCropPotatoChips").value,
-    "Britannia Chocolush": +getById("spBritanniaChocolush").value,
     "BRITANNIA Pure Magic Chocolush": +getById("spBritanniaPureMagicChocolush").value,
     Namkeen: +getById("spNamkeen").value,
     "Onion Chips": +getById("spOnionChips").value,
     "Tomato Chips": +getById("spTomatoChips").value,
     "Unibic Chocolate Chip Cookies": +getById("spUnibicCookies").value,
     "Unibic Kesar Cashew Badam Cookies": +getById("spUnibicKesarCashewBadamCookies").value,
-    "Unibic Chocokiss": +getById("spUnibicChocokiss").value,
     "Chocokiss Cookies": +getById("spChocokissCookies").value
   };
   try {
