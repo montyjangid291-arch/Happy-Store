@@ -687,6 +687,14 @@ input:focus, select:focus {
     <button onclick="loadOrders()">Show Live Orders</button>
     <div id="liveOrders" style="margin-top:10px;"></div>
     <hr>
+    <h3>Orders Excel Export</h3>
+    <div style="border:1px solid #d5e3ef;border-radius:10px;padding:10px;background:#f8fcff;margin-bottom:12px;">
+      <input id="orderExportMonth" type="month" style="max-width:220px;">
+      <button onclick="downloadOrdersExcel('month')" style="margin-left:6px;">Download Monthly Excel</button>
+      <button onclick="downloadOrdersExcel('total')" style="margin-left:6px;">Download Total Excel</button>
+      <div id="ordersExportStatus" style="margin-top:8px;font-size:12px;color:#245476;"></div>
+    </div>
+    <hr>
     <h3>All Customers (This Month)</h3>
     <button onclick="loadAdminCustomersReport()">Load Customer Spending</button>
     <button onclick="resetCustomerMoney()" style="background:#d9534f;color:#fff;">Reset Customer Money</button>
@@ -3481,6 +3489,226 @@ async function loadLifetimeCustomersReport() {
   }
 }
 
+function getCurrentMonthInputValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function setOrdersExportStatus(text, isError) {
+  const box = getById("ordersExportStatus");
+  if (!box) return;
+  box.innerText = text;
+  box.style.color = isError ? "#b42318" : "#245476";
+}
+
+function getOrderDateForExport(order) {
+  const primary = order && order.createdAt ? new Date(order.createdAt) : null;
+  if (primary && !Number.isNaN(primary.getTime())) return primary;
+  const fallback = order && order.time ? new Date(order.time) : null;
+  if (fallback && !Number.isNaN(fallback.getTime())) return fallback;
+  return null;
+}
+
+function getOrderMonthKeyForExport(order) {
+  const dt = getOrderDateForExport(order);
+  if (!dt) return "-";
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatOrderDateForExport(order) {
+  const dt = getOrderDateForExport(order);
+  if (!dt) return String(order && order.time ? order.time : "-");
+  return new Intl.DateTimeFormat("en-IN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  }).format(dt);
+}
+
+function formatOrderItemsForExport(items) {
+  if (!Array.isArray(items) || !items.length) return "-";
+  return items.map((item) => {
+    const name = String(item && item.name ? item.name : "Item").trim() || "Item";
+    const qty = Number(item && item.qty) || 0;
+    const price = Number(item && item.price) || 0;
+    return `${name} x${qty} @ Rs ${price}`;
+  }).join(", ");
+}
+
+function getOrderItemsCountForExport(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((sum, item) => sum + (Number(item && item.qty) || 0), 0);
+}
+
+function escapeExcelCell(value) {
+  return escapeHtml(value == null ? "" : String(value)).replace(/\n/g, "<br>");
+}
+
+function downloadBlobFile(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildOrdersExcelHtml(title, rows, meta) {
+  const summaryLines = Array.isArray(meta)
+    ? meta.filter(Boolean).map((line) => `<div>${escapeExcelCell(line)}</div>`).join("")
+    : "";
+
+  const tableRows = rows.map((row, idx) => `<tr>
+<td>${idx + 1}</td>
+<td>${escapeExcelCell(row.orderId)}</td>
+<td>${escapeExcelCell(row.dateTime)}</td>
+<td>${escapeExcelCell(row.month)}</td>
+<td>${escapeExcelCell(row.status)}</td>
+<td>${escapeExcelCell(row.customerName)}</td>
+<td>${escapeExcelCell(row.room)}</td>
+<td>${escapeExcelCell(row.hostel)}</td>
+<td>${escapeExcelCell(row.mode)}</td>
+<td>${escapeExcelCell(row.deliveryType)}</td>
+<td>${escapeExcelCell(row.collectFromRoom)}</td>
+<td>${escapeExcelCell(row.items)}</td>
+<td>${escapeExcelCell(row.itemsQty)}</td>
+<td>${escapeExcelCell(row.deliveryCharge)}</td>
+<td>${escapeExcelCell(row.total)}</td>
+<td>${escapeExcelCell(row.profit)}</td>
+<td>${escapeExcelCell(row.excludeCustomerStats)}</td>
+<td>${escapeExcelCell(row.excludeProfitStats)}</td>
+<td>${escapeExcelCell(row.cancelledAt)}</td>
+<td>${escapeExcelCell(row.adjustedAt)}</td>
+</tr>`).join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: Arial, sans-serif; }
+h2 { margin-bottom: 8px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #999; padding: 6px; vertical-align: top; }
+th { background: #eef6ff; }
+</style>
+</head>
+<body>
+<h2>${escapeExcelCell(title)}</h2>
+${summaryLines}
+<table>
+<tr>
+<th>#</th>
+<th>Order ID</th>
+<th>Date Time</th>
+<th>Month</th>
+<th>Status</th>
+<th>Customer Name</th>
+<th>Room</th>
+<th>Hostel</th>
+<th>Mode</th>
+<th>Delivery Type</th>
+<th>Collect From Room</th>
+<th>Items</th>
+<th>Total Qty</th>
+<th>Delivery Charge</th>
+<th>Total</th>
+<th>Profit</th>
+<th>Exclude Customer Stats</th>
+<th>Exclude Profit Stats</th>
+<th>Cancelled At</th>
+<th>Adjusted At</th>
+</tr>
+${tableRows}
+</table>
+</body>
+</html>`;
+}
+
+async function downloadOrdersExcel(scope) {
+  if (!adminLoggedIn) {
+    const ok = await ensureAdminSession(false);
+    if (!ok) {
+      setOrdersExportStatus("Admin login required before Excel download", true);
+      return;
+    }
+  }
+
+  const monthInput = String(getById("orderExportMonth")?.value || "").trim() || getCurrentMonthInputValue();
+  const monthKey = /^\d{4}-\d{2}$/.test(monthInput) ? monthInput : getCurrentMonthInputValue();
+  const isMonthly = scope === "month";
+
+  try {
+    setOrdersExportStatus(isMonthly ? `Preparing ${monthKey} monthly Excel...` : "Preparing total Excel...", false);
+    const res = await apiFetch(`/orders?nocache=${Date.now()}`);
+    if (res.status === 401) {
+      handleAdminSessionExpired("Admin session expired. Orders Excel download ke liye dobara login karo.");
+      setOrdersExportStatus("Admin session expired. Login again.", true);
+      return;
+    }
+    if (!res.ok) throw new Error("orders fetch failed");
+    const rawOrders = await safeJson(res);
+    const orders = Array.isArray(rawOrders) ? rawOrders : [];
+
+    const filteredOrders = orders.filter((order) => {
+      if (!isMonthly) return true;
+      return getOrderMonthKeyForExport(order) === monthKey;
+    });
+
+    const rows = filteredOrders.map((order) => ({
+      orderId: Number(order && order.id) || "-",
+      dateTime: formatOrderDateForExport(order),
+      month: getOrderMonthKeyForExport(order),
+      status: String(order && order.status ? order.status : "active"),
+      customerName: String(order && order.name ? order.name : "-"),
+      room: String(order && order.room ? order.room : "-"),
+      hostel: String(order && order.hostel ? order.hostel : "-"),
+      mode: String(order && order.mode ? order.mode : "-"),
+      deliveryType: String(order && order.deliveryType ? order.deliveryType : "-"),
+      collectFromRoom: String(order && order.collectFromRoom ? order.collectFromRoom : "-"),
+      items: formatOrderItemsForExport(order && order.items),
+      itemsQty: getOrderItemsCountForExport(order && order.items),
+      deliveryCharge: Number(order && order.deliveryCharge) || 0,
+      total: Number(order && order.total) || 0,
+      profit: Number(order && order.profit) || 0,
+      excludeCustomerStats: order && order.excludeFromCustomerStats ? "Yes" : "No",
+      excludeProfitStats: order && order.excludeFromProfitStats ? "Yes" : "No",
+      cancelledAt: order && order.cancelledAt ? String(order.cancelledAt) : "-",
+      adjustedAt: order && order.adjustedAt ? String(order.adjustedAt) : "-",
+    }));
+
+    if (!rows.length) {
+      setOrdersExportStatus(isMonthly ? `No orders found for ${monthKey}` : "No orders found yet", true);
+      return;
+    }
+
+    const totalAmount = rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
+    const totalProfit = rows.reduce((sum, row) => sum + (Number(row.profit) || 0), 0);
+    const title = isMonthly ? `Monty Mart Orders Report - ${monthKey}` : "Monty Mart Orders Report - All Time";
+    const html = buildOrdersExcelHtml(title, rows, [
+      `Generated: ${formatBillDateTime(new Date())}`,
+      `Scope: ${isMonthly ? `Monthly (${monthKey})` : "All Time"}`,
+      `Orders: ${rows.length}`,
+      `Total Amount: Rs ${totalAmount}`,
+      `Total Profit: Rs ${totalProfit}`
+    ]);
+    const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const fileName = isMonthly ? `orders-${monthKey}.xls` : "orders-all-time.xls";
+    downloadBlobFile(blob, fileName);
+    setOrdersExportStatus(`${fileName} downloaded successfully`, false);
+  } catch (err) {
+    console.error(err);
+    setOrdersExportStatus("Could not download orders Excel", true);
+    alert(`Could not download orders Excel: ${err.message || "Unknown error"}`);
+  }
+}
+
 getById("mode").addEventListener("change", () => {
   renderDeliveryNote();
   showCart();
@@ -3502,6 +3730,10 @@ document.addEventListener("click", armSoundOnce, { once: true });
 document.addEventListener("touchstart", armSoundOnce, { once: true });
 initPushNotifications();
 setAdminSurfaceVisible(false);
+const orderExportMonthInput = getById("orderExportMonth");
+if (orderExportMonthInput && !orderExportMonthInput.value) {
+  orderExportMonthInput.value = getCurrentMonthInputValue();
+}
 restoreAdminSessionSilently();
 showCart();
 renderDeliveryNote();
