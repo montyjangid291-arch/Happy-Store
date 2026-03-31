@@ -732,7 +732,7 @@ input:focus, select:focus {
     <h3>All-Time Customer Spending (Never Reset)</h3>
     <button onclick="loadLifetimeCustomersReport()">Load Lifetime Spending</button>
     <div id="lifetimeCustomersReport" style="margin-top:10px;"></div>
-    <button id="financeToggleBtn" onclick="toggleFinanceSection()" style="background:#6c757d;color:#fff;margin-top:8px;">Show Finance Section</button>
+    <button id="financeToggleBtn" onclick="toggleFinanceSection()" style="background:#6c757d;color:#fff;margin-top:8px;display:none;">Show Finance Section</button>
 
     <div id="financeSection" style="display:none;">
     <h3>Purchase/Sell Price (Profit)</h3>
@@ -861,6 +861,8 @@ let closingSoonAlertEnabled = false;
 let sleepingCallAlertEnabled = false;
 let outOfHostelAlertEnabled = false;
 let examDeliveryOffAlertEnabled = false;
+let financeUnlockClicks = 0;
+let financeUnlocked = false;
 let adminLoggedIn = false;
 let orderCounter = parseInt(localStorage.getItem("orderNo") || "1001", 10);
 let lastSeenOrderId = null;
@@ -2228,11 +2230,19 @@ function setFinanceSectionVisibility(show) {
   const box = getById("financeSection");
   const btn = getById("financeToggleBtn");
   if (!box || !btn) return;
+  if (!financeUnlocked) {
+    box.style.display = "none";
+    btn.style.display = "none";
+    btn.innerText = "Show Finance Section";
+    return;
+  }
+  btn.style.display = "inline-block";
   box.style.display = show ? "block" : "none";
   btn.innerText = show ? "Hide Finance Section" : "Show Finance Section";
 }
 
 function toggleFinanceSection() {
+  if (!financeUnlocked) return;
   const box = getById("financeSection");
   if (!box) return;
   const isVisible = box.style.display !== "none";
@@ -2243,7 +2253,18 @@ function toggleFinanceSection() {
   setFinanceSectionVisibility(true);
 }
 
+function registerFinanceUnlockClick() {
+  if (financeUnlocked) return false;
+  financeUnlockClicks += 1;
+  if (financeUnlockClicks < 5) return false;
+  financeUnlocked = true;
+  setFinanceSectionVisibility(true);
+  alert("Finance section unlocked");
+  return true;
+}
+
 async function saveStock() {
+  registerFinanceUnlockClick();
   const nextStock = { ...stockData };
   const stockDeltas = {};
   let changed = 0;
