@@ -182,6 +182,7 @@ const StoreStateSchema = new mongoose.Schema(
     monthProfitAdjustments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
     monthDeliveryProfitAdjustments: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
     totalProfitAdjustment: { type: Number, default: DEFAULT_TOTAL_PROFIT_ADJUSTMENT },
+    activeMonthKey: { type: String, default: "" },
     buyPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultBuyPrice }) },
     sellPrice: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultSellPrice }) },
     distributorStock: { type: mongoose.Schema.Types.Mixed, default: () => ({ ...defaultDistributorStock }) },
@@ -206,6 +207,7 @@ let manualCustomers = normalizeManualCustomers(defaultManualCustomers);
 let monthProfitAdjustments = {};
 let monthDeliveryProfitAdjustments = {};
 let totalProfitAdjustment = DEFAULT_TOTAL_PROFIT_ADJUSTMENT;
+let activeMonthKey = "";
 let buyPrice = { ...defaultBuyPrice };
 let sellPrice = { ...defaultSellPrice };
 let distributorStock = normalizeDistributorStock(defaultDistributorStock);
@@ -249,6 +251,7 @@ async function saveData() {
         monthProfitAdjustments,
         monthDeliveryProfitAdjustments,
         totalProfitAdjustment,
+        activeMonthKey,
         buyPrice,
         sellPrice,
         distributorStock,
@@ -273,6 +276,7 @@ async function saveData() {
 async function loadStateFromMongo() {
   const doc = await StoreState.findOne({ singletonKey: "main" }).lean();
   if (!doc) {
+    activeMonthKey = getMonthKey(new Date());
     await StoreState.create({
       singletonKey: "main",
       storeStock,
@@ -282,6 +286,7 @@ async function loadStateFromMongo() {
       monthProfitAdjustments,
       monthDeliveryProfitAdjustments,
       totalProfitAdjustment,
+      activeMonthKey,
       buyPrice,
       sellPrice,
       distributorStock,
@@ -311,6 +316,10 @@ async function loadStateFromMongo() {
   totalProfitAdjustment = Number.isFinite(Number(doc.totalProfitAdjustment))
     ? Number(doc.totalProfitAdjustment)
     : DEFAULT_TOTAL_PROFIT_ADJUSTMENT;
+  activeMonthKey =
+    typeof doc.activeMonthKey === "string" && /^\d{4}-\d{2}$/.test(doc.activeMonthKey)
+      ? doc.activeMonthKey
+      : getMonthKey(new Date());
   buyPrice = mergeProductMap(defaultBuyPrice, migratedBuyPrice, 0);
   sellPrice = normalizeSellPriceMap(migratedSellPrice);
   distributorStock = normalizeDistributorStock(migratedDistributorStock);
@@ -528,6 +537,8 @@ const ADMIN_PROTECTED_PATHS = new Set([
   "/set-month-delivery-profit",
   "/admin/set-total-profit",
   "/set-total-profit",
+  "/admin/month-state",
+  "/admin/reset-month",
   "/orders",
   "/distributor-stock",
   "/distributor-month-summary",
@@ -764,6 +775,33 @@ function getMonthKey(date) {
   return `${byType.year}-${byType.month}`;
 }
 
+function getActiveMonthKey() {
+  if (/^\d{4}-\d{2}$/.test(activeMonthKey)) return activeMonthKey;
+  activeMonthKey = getMonthKey(new Date());
+  return activeMonthKey;
+}
+
+function getNextMonthKey(monthKeyRaw) {
+  const monthKey = /^\d{4}-\d{2}$/.test(String(monthKeyRaw || "")) ? String(monthKeyRaw) : getActiveMonthKey();
+  const [yearRaw, monthRaw] = monthKey.split("-");
+  let year = Number(yearRaw) || new Date().getFullYear();
+  let month = Number(monthRaw) || 1;
+  month += 1;
+  if (month > 12) {
+    month = 1;
+    year += 1;
+  }
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function getOrderReportingMonth(order) {
+  if (order && typeof order.reportingMonth === "string" && /^\d{4}-\d{2}$/.test(order.reportingMonth)) {
+    return order.reportingMonth;
+  }
+  const dt = getOrderDate(order);
+  return dt ? getMonthKey(dt) : getActiveMonthKey();
+}
+
 function normalizeCustomerName(nameRaw) {
   return String(nameRaw || "").replace(/\s+/g, " ").trim();
 }
@@ -809,7 +847,7 @@ function addOrderToCustomerLedger(order) {
   const room = normalizeCustomerRoom(order.room) || "-";
   const orderTotal = Math.max(0, Number(order.total) || 0);
   const orderCount = 1;
-  const month = getMonthKey(getOrderDate(order) || new Date());
+  const month = getOrderReportingMonth(order);
 
   if (!manualCustomers.monthly[month]) {
     manualCustomers.monthly[month] = {};
@@ -849,7 +887,7 @@ function adjustCustomerLedgerForOrder(order, totalDelta, ordersDelta = 0) {
   ensureManualCustomerLedger();
 
   const key = buildCustomerKey(order.name, order.room);
-  const month = getMonthKey(getOrderDate(order) || new Date());
+  const month = getOrderReportingMonth(order);
   const totalChange = Number(totalDelta) || 0;
   const ordersChange = Number(ordersDelta) || 0;
 
@@ -924,8 +962,7 @@ function buildMonthlyCustomerSpendMaps(month) {
 
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
+    if (getOrderReportingMonth(order) !== month) return;
 
     const key = buildCustomerKey(order.name, order.room);
     const baseRow = {
@@ -1157,7 +1194,7 @@ app.post("/stock", (req, res) => {
     offlineProfitAdded = Number(payload.offlineProfitDelta);
     if (offlineProfitAdded !== 0) {
       totalProfitAdjustment += offlineProfitAdded;
-      const month = getMonthKey(new Date());
+      const month = getActiveMonthKey();
       monthProfitAdjustments[month] = (Number(monthProfitAdjustments[month]) || 0) + offlineProfitAdded;
     }
   }
@@ -1198,7 +1235,7 @@ function handleOfflineSale(req, res) {
 
   storeStock[itemName] = available - qty;
   totalProfitAdjustment += profitAdded;
-  const month = getMonthKey(new Date());
+  const month = getActiveMonthKey();
   monthProfitAdjustments[month] = (Number(monthProfitAdjustments[month]) || 0) + profitAdded;
   saveData();
 
@@ -1263,6 +1300,7 @@ app.post("/order", async (req, res) => {
   order.id = Date.now();
   order.time = formatOrderDisplayTime(new Date());
   order.createdAt = new Date().toISOString();
+  order.reportingMonth = getActiveMonthKey();
   order.status = "active";
   order.cancelledAt = null;
   const cancelToken = crypto.randomBytes(24).toString("hex");
@@ -1347,7 +1385,7 @@ app.get("/today-report", (req, res) => {
   let revenue = 0;
   let profit = 0;
   let deliveryProfit = 0;
-  const currentMonth = getMonthKey(new Date());
+  const currentMonth = getActiveMonthKey();
   const monthProfitAdjustment = Number(monthProfitAdjustments[currentMonth]) || 0;
   const monthDeliveryProfitAdjustment = Number(monthDeliveryProfitAdjustments[currentMonth]) || 0;
   let monthRevenue = 0;
@@ -1383,7 +1421,7 @@ app.get("/today-report", (req, res) => {
       }
     }
 
-    if (getMonthKey(dt) === currentMonth) {
+    if (getOrderReportingMonth(order) === currentMonth) {
       monthRevenue += orderTotal;
       monthProfit += orderProfit;
       monthDeliveryProfit += orderDeliveryProfit;
@@ -1638,7 +1676,7 @@ app.post("/accept-order", async (req, res) => {
 app.get("/top-customers", (req, res) => {
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
   const { allSpendMap } = buildMonthlyCustomerSpendMaps(month);
   const ranked = sortCustomersBySpend(Object.values(allSpendMap)).slice(0, 3);
 
@@ -1648,7 +1686,7 @@ app.get("/top-customers", (req, res) => {
 app.get("/customers-report", (req, res) => {
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
   const { allSpendMap, activeSpendMap, excludedSpendMap } = buildMonthlyCustomerSpendMaps(month);
 
   const allCustomers = sortCustomersBySpend(Object.values(allSpendMap));
@@ -1696,7 +1734,7 @@ app.get("/admin/customer-spend", (req, res) => {
 
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
   const rows = sortCustomersBySpend(Object.values((manualCustomers.monthly && manualCustomers.monthly[month]) || {}));
   return res.json({ scope: "month", month, customers: rows });
 });
@@ -1725,7 +1763,7 @@ app.post("/admin/customer-spend", async (req, res) => {
 
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
   if (!manualCustomers.monthly[month]) manualCustomers.monthly[month] = {};
   manualCustomers.monthly[month][key] = payload;
   if (!(await saveData())) {
@@ -1755,7 +1793,7 @@ app.post("/admin/customer-spend/delete", async (req, res) => {
 
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
   if (manualCustomers.monthly && manualCustomers.monthly[month] && manualCustomers.monthly[month][key]) {
     delete manualCustomers.monthly[month][key];
     if (Object.keys(manualCustomers.monthly[month]).length === 0) {
@@ -1771,13 +1809,12 @@ app.post("/admin/customer-spend/delete", async (req, res) => {
 function handleResetCustomerMoney(req, res) {
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
 
   let affected = 0;
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
+    if (getOrderReportingMonth(order) !== month) return;
     if (!order.excludeFromCustomerStats) {
       order.excludeFromCustomerStats = true;
       affected += 1;
@@ -1791,13 +1828,12 @@ function handleResetCustomerMoney(req, res) {
 function handleResetProfit(req, res) {
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
 
   let affected = 0;
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
+    if (getOrderReportingMonth(order) !== month) return;
     if (!order.excludeFromProfitStats) {
       order.excludeFromProfitStats = true;
       affected += 1;
@@ -1812,8 +1848,7 @@ function calculateRawMonthProfit(month) {
   let monthProfit = 0;
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
+    if (getOrderReportingMonth(order) !== month) return;
     const orderProfitBase = Number.isFinite(Number(order.profit))
       ? Number(order.profit)
       : calculateOrderProfit(order);
@@ -1840,8 +1875,7 @@ function calculateRawMonthDeliveryProfit(month) {
   let monthDeliveryProfit = 0;
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
+    if (getOrderReportingMonth(order) !== month) return;
     if (isOrderExcludedFromProfitStats(order)) return;
     if (String(order.mode || "").toLowerCase() !== "delivery") return;
     monthDeliveryProfit += Number(order.deliveryCharge) || 0;
@@ -1852,7 +1886,7 @@ function calculateRawMonthDeliveryProfit(month) {
 function handleSetMonthProfit(req, res) {
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
 
   const desiredMonthProfit = Number(req.body?.desiredMonthProfit);
   if (!Number.isFinite(desiredMonthProfit)) {
@@ -1901,7 +1935,7 @@ function handleSetTotalProfit(req, res) {
 function handleSetMonthDeliveryProfit(req, res) {
   const month = typeof req.body?.month === "string" && /^\d{4}-\d{2}$/.test(req.body.month)
     ? req.body.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
 
   const desiredMonthDeliveryProfit = Number(req.body?.desiredMonthDeliveryProfit);
   if (!Number.isFinite(desiredMonthDeliveryProfit)) {
@@ -1927,6 +1961,30 @@ app.post("/set-month-delivery-profit", handleSetMonthDeliveryProfit);
 app.post("/admin/set-total-profit", handleSetTotalProfit);
 app.post("/set-total-profit", handleSetTotalProfit);
 
+app.get("/admin/month-state", (req, res) => {
+  return res.json({ activeMonth: getActiveMonthKey() });
+});
+
+app.post("/admin/reset-month", async (req, res) => {
+  const password = String(req.body?.password || "").trim();
+  if (!isValidAdminPassword(password)) {
+    return res.status(401).json({ status: "unauthorized", message: "Invalid password" });
+  }
+
+  const previousMonth = getActiveMonthKey();
+  const nextMonth =
+    typeof req.body?.nextMonth === "string" && /^\d{4}-\d{2}$/.test(req.body.nextMonth)
+      ? req.body.nextMonth
+      : getNextMonthKey(previousMonth);
+
+  activeMonthKey = nextMonth;
+  if (!(await saveData())) {
+    return res.status(500).json({ status: "error", message: "Could not reset month" });
+  }
+
+  return res.json({ status: "reset", previousMonth, activeMonth: activeMonthKey });
+});
+
 app.get("/orders", (req, res) => {
   res.json(orders);
 });
@@ -1947,7 +2005,7 @@ app.post("/distributor-stock", (req, res) => {
 app.get("/distributor-month-summary", (req, res) => {
   const month = typeof req.query.month === "string" && /^\d{4}-\d{2}$/.test(req.query.month)
     ? req.query.month
-    : getMonthKey(new Date());
+    : getActiveMonthKey();
 
   const summary = {
     "104": { ordersCount: 0, totalAmount: 0, items: getDefaultProductMap(0) },
@@ -1957,8 +2015,7 @@ app.get("/distributor-month-summary", (req, res) => {
 
   orders.forEach((order) => {
     if (isOrderCancelled(order)) return;
-    const dt = getOrderDate(order);
-    if (!dt || getMonthKey(dt) !== month) return;
+    if (getOrderReportingMonth(order) !== month) return;
     const room = String(order.collectFromRoom || getDistributorRoomByCustomerRoom(order.room));
     if (!summary[room]) return;
 

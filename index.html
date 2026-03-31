@@ -727,6 +727,14 @@ input:focus, select:focus {
       <div id="ordersExportStatus" style="margin-top:8px;font-size:12px;color:#245476;"></div>
     </div>
     <hr>
+    <h3>Old Month Proof</h3>
+    <div style="border:1px solid #d5e3ef;border-radius:10px;padding:10px;background:#f8fcff;margin-bottom:12px;">
+      <input id="proofMonth" type="month" style="max-width:220px;">
+      <button onclick="loadTopCustomers()" style="margin-left:6px;">Show Top 3</button>
+      <button onclick="loadAdminCustomersReport()" style="margin-left:6px;">Show Month Report</button>
+      <div style="margin-top:6px;font-size:12px;color:#666;">Is month picker se purane month ka top 3 aur customer spending proof dekh sakte ho.</div>
+    </div>
+    <hr>
     <h3>All Customers (This Month)</h3>
     <button onclick="loadAdminCustomersReport()">Load Customer Spending</button>
     <button onclick="resetCustomerMoney()" style="background:#d9534f;color:#fff;">Reset Customer Money</button>
@@ -794,11 +802,13 @@ input:focus, select:focus {
     </div>
 
     <div style="font-size:12px;color:#666;margin-top:6px;">Buy/Sell price aur finance details sirf admin login ke baad available hain.</div>
+    <div id="activeMonthBox" style="margin-top:6px;font-weight:700;color:#245476;">Active Month: Loading...</div>
     <div id="totalProfitBox">Total Profit (All Time): Rs 0</div>
     <div id="profitBox">Today Profit: Rs 0</div>
     <div id="monthProfitBox">This Month Profit: Rs 0</div>
     <div id="deliveryProfitBox">Room Delivery Profit (Today): Rs 0</div>
     <div id="monthDeliveryProfitBox">Room Delivery Profit (This Month): Rs 0</div>
+    <button onclick="manuallyResetMonth()" style="background:#6f42c1;color:#fff;margin-top:8px;">Manual Month Reset</button>
     <button onclick="resetProfitTotals()" style="background:#d9534f;color:#fff;margin-top:8px;">Reset Profit</button>
     <button onclick="setMonthProfitManually()" style="background:#0d6efd;color:#fff;margin-top:8px;">Set This Month Profit</button>
     <button onclick="setMonthDeliveryProfitManually()" style="background:#198754;color:#fff;margin-top:8px;">Set Month Delivery Profit</button>
@@ -1197,6 +1207,11 @@ function setAdminSurfaceVisible(show) {
     getById("adminPanel").style.display = "none";
     setFinanceSectionVisibility(false);
   }
+}
+
+function getSelectedProofMonth() {
+  const raw = String(getById("proofMonth")?.value || "").trim();
+  return /^\d{4}-\d{2}$/.test(raw) ? raw : "";
 }
 
 async function ensureAdminSession(forcePrompt) {
@@ -2651,6 +2666,7 @@ async function refreshTodayReport(showPopup) {
     const monthProfitBox = getById("monthProfitBox");
     const deliveryProfitBox = getById("deliveryProfitBox");
     const monthDeliveryProfitBox = getById("monthDeliveryProfitBox");
+    const activeMonthBox = getById("activeMonthBox");
     if (earningsBox) earningsBox.innerText = `Today Earnings: Rs ${data.revenue || 0}`;
     if (monthEarningsBox) monthEarningsBox.innerText = `This Month Earning: Rs ${data.monthRevenue || 0}`;
     if (totalProfitBox) totalProfitBox.innerText = `Total Profit (All Time): Rs ${data.totalProfit || 0}`;
@@ -2658,6 +2674,7 @@ async function refreshTodayReport(showPopup) {
     if (monthProfitBox) monthProfitBox.innerText = `This Month Profit: Rs ${data.monthProfit || 0}`;
     if (deliveryProfitBox) deliveryProfitBox.innerText = `Room Delivery Profit (Today): Rs ${data.deliveryProfit || 0}`;
     if (monthDeliveryProfitBox) monthDeliveryProfitBox.innerText = `Room Delivery Profit (This Month): Rs ${data.monthDeliveryProfit || 0}`;
+    if (activeMonthBox) activeMonthBox.innerText = `Active Month: ${data.month || "-"}`;
 
     if (!showPopup) return;
 
@@ -3024,20 +3041,10 @@ async function adminUpdateOrderStatus(orderId, action) {
 }
 
 async function loadTopCustomers() {
-  function monthKey(dateObj) {
-    return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
-  }
-  function orderDate(order) {
-    const d1 = order && order.createdAt ? new Date(order.createdAt) : null;
-    if (d1 && !Number.isNaN(d1.getTime())) return d1;
-    const d2 = order && order.time ? new Date(order.time) : null;
-    if (d2 && !Number.isNaN(d2.getTime())) return d2;
-    return null;
-  }
   function renderTop(data) {
     const top = Array.isArray(data.topCustomers) ? data.topCustomers : [];
     if (top.length === 0) {
-      getById("topCustomersBox").innerText = "Top 3 Customers (This Month): No orders yet";
+      getById("topCustomersBox").innerText = `Top 3 Customers (${data.month || "Selected Month"}): No orders yet`;
       return;
     }
     const lines = top
@@ -3047,13 +3054,15 @@ async function loadTopCustomers() {
   }
 
   try {
-    const res = await apiFetch(`/top-customers?nocache=${Date.now()}`);
+    const selectedMonth = getSelectedProofMonth();
+    const query = selectedMonth ? `&month=${encodeURIComponent(selectedMonth)}` : "";
+    const res = await apiFetch(`/top-customers?nocache=${Date.now()}${query}`);
     if (!res.ok) throw new Error("top customers fetch failed");
     const data = await res.json();
     renderTop(data);
   } catch (err) {
     console.error("Top customers could not load:", err);
-    getById("topCustomersBox").innerText = "Top 3 Customers (This Month): Could not load";
+    getById("topCustomersBox").innerText = "Top 3 Customers: Could not load";
   }
 }
 
@@ -3066,7 +3075,9 @@ async function loadAdminCustomersReport() {
     }
   }
   try {
-    const res = await apiFetch(`/customers-report?nocache=${Date.now()}`);
+    const selectedMonth = getSelectedProofMonth();
+    const query = selectedMonth ? `&month=${encodeURIComponent(selectedMonth)}` : "";
+    const res = await apiFetch(`/customers-report?nocache=${Date.now()}${query}`);
     if (res.status === 401) {
       handleAdminSessionExpired("Admin session expired. Customer spending reload ke liye dobara login karo.");
       getById("adminCustomersReport").innerHTML = "<div>Admin session expired. Login again.</div>";
@@ -3562,6 +3573,43 @@ async function loadLifetimeCustomersReport() {
   }
 }
 
+async function manuallyResetMonth() {
+  if (!adminLoggedIn) {
+    const ok = await ensureAdminSession(false);
+    if (!ok) return;
+  }
+
+  const password = prompt("Month reset ke liye admin password enter karo");
+  if (password === null) return;
+  if (!String(password).trim()) {
+    alert("Password required");
+    return;
+  }
+
+  const ok = confirm("Manual month reset karna hai? Iske baad new orders next month bucket mein jayenge.");
+  if (!ok) return;
+
+  try {
+    const res = await apiFetch("/admin/reset-month", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: String(password).trim() })
+    });
+    const data = await safeJson(res);
+    if (!res.ok || data.status !== "reset") {
+      throw new Error(data.message || data.status || "Month reset failed");
+    }
+    alert(`Month reset done. Previous: ${data.previousMonth} | Active now: ${data.activeMonth}`);
+    refreshTodayReport(false);
+    loadTopCustomers();
+    loadAdminCustomersReport();
+    loadLifetimeCustomersReport();
+  } catch (err) {
+    console.error(err);
+    alert(`Could not reset month: ${err.message || "Unknown error"}`);
+  }
+}
+
 function getCurrentMonthInputValue() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -3806,6 +3854,10 @@ setAdminSurfaceVisible(false);
 const orderExportMonthInput = getById("orderExportMonth");
 if (orderExportMonthInput && !orderExportMonthInput.value) {
   orderExportMonthInput.value = getCurrentMonthInputValue();
+}
+const proofMonthInput = getById("proofMonth");
+if (proofMonthInput && !proofMonthInput.value) {
+  proofMonthInput.value = getCurrentMonthInputValue();
 }
 restoreAdminSessionSilently();
 showCart();
