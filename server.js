@@ -24,6 +24,7 @@ const defaultStock = {
   "Unibic Kesar Cashew Badam Cookies": 5,
   "Chocokiss Cookies": 5,
   "Mad Angel": 0,
+  Kurkure: 0,
 };
 
 const defaultBuyPrice = {
@@ -41,6 +42,7 @@ const defaultBuyPrice = {
   "Unibic Kesar Cashew Badam Cookies": 0,
   "Chocokiss Cookies": 0,
   "Mad Angel": 0,
+  Kurkure: 0,
 };
 
 const defaultSellPrice = {
@@ -58,6 +60,7 @@ const defaultSellPrice = {
   "Unibic Kesar Cashew Badam Cookies": 60,
   "Chocokiss Cookies": 6,
   "Mad Angel": 50,
+  Kurkure: 30,
 };
 
 const defaultManualCustomers = {
@@ -82,6 +85,7 @@ function getDefaultProductMap(fillValue) {
     "Unibic Kesar Cashew Badam Cookies": fillValue,
     "Chocokiss Cookies": fillValue,
     "Mad Angel": fillValue,
+    Kurkure: fillValue,
   };
 }
 
